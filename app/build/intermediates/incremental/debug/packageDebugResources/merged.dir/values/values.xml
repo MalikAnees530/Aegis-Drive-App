@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent_dark">#4E6070</color>
+    <color name="accent_light">#8FA3B5</color>
+    <color name="accent_primary">#6D8196</color>
+    <color name="bg_deepest">#1A1A1A</color>
+    <color name="bg_elevated">#3A3A3A</color>
+    <color name="bg_surface">#2C2C2C</color>
+    <color name="border_subtle">#3F3F3F</color>
+    <color name="border_visible">#555555</color>
+    <color name="charcoal">#4A4A4A</color>
+    <color name="colorBackground">#1A1A1A</color>
+    <color name="colorError">#EF5350</color>
+    <color name="colorOnBackground">#FFFFE3</color>
+    <color name="colorOnError">#FFFFE3</color>
+    <color name="colorOnPrimary">#FFFFE3</color>
+    <color name="colorOnSecondary">#1A1A1A</color>
+    <color name="colorOnSurface">#FFFFE3</color>
+    <color name="colorPrimary">#6D8196</color>
+    <color name="colorPrimaryVariant">#4E6070</color>
+    <color name="colorSecondary">#CBCBCB</color>
+    <color name="colorSecondaryVariant">#9E9E9E</color>
+    <color name="colorSurface">#2C2C2C</color>
+    <color name="nav_background">#242424</color>
+    <color name="nav_icon_active">#FFFFE3</color>
+    <color name="nav_icon_inactive">#6E6E6E</color>
+    <color name="status_danger">#EF5350</color>
+    <color name="status_safe">#6ABF69</color>
+    <color name="status_warning">#FFB74D</color>
+    <color name="text_disabled">#757575</color>
+    <color name="text_primary">#FFFFE3</color>
+    <color name="text_secondary">#CBCBCB</color>
+    <string name="app_name">Aegis Drive</string>
+    <style name="AegisDrive.Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">@color/accent_primary</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/accent_primary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+    </style>
+    <style name="AegisDrive.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/accent_primary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="cornerRadius">28dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="rippleColor">@color/accent_dark</item>
+    </style>
+    <style name="AegisDrive.Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/accent_light</item>
+        <item name="android:textSize">14sp</item>
+        <item name="rippleColor">@color/accent_dark</item>
+    </style>
+    <style name="AegisDrive.CardView" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/bg_surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">@color/border_subtle</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+    <style name="AegisDrive.StatusBadge.Danger" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">#1AEF5350</item>
+        <item name="android:textColor">@color/status_danger</item>
+        <item name="chipStrokeColor">@color/status_danger</item>
+        <item name="chipStrokeWidth">1dp</item>
+    </style>
+    <style name="AegisDrive.StatusBadge.Safe" parent="Widget.MaterialComponents.Chip.Action">
+        <item name="chipBackgroundColor">#1A6ABF69</item>
+        <item name="android:textColor">@color/status_safe</item>
+        <item name="chipStrokeColor">@color/status_safe</item>
+        <item name="chipStrokeWidth">1dp</item>
+    </style>
+    <style name="AegisDrive.Text.Body" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+    <style name="AegisDrive.Text.Caption" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">@color/text_disabled</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+    <style name="AegisDrive.Text.Heading" parent="TextAppearance.MaterialComponents.Headline4">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+    <style name="AegisDrive.Text.Subheading" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="AegisDrive.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/bg_elevated</item>
+        <item name="boxStrokeColor">@color/border_visible</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_disabled</item>
+    </style>
+    <style name="Theme.AegisDrive" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        
+        <item name="colorPrimary">@color/accent_primary</item>
+        <item name="colorPrimaryVariant">@color/accent_dark</item>
+        <item name="colorOnPrimary">@color/text_primary</item>
+
+        
+        <item name="colorSecondary">@color/text_secondary</item>
+        <item name="colorSecondaryVariant">@color/text_disabled</item>
+        <item name="colorOnSecondary">@color/bg_deepest</item>
+
+        
+        <item name="android:colorBackground">@color/bg_deepest</item>
+        <item name="colorOnBackground">@color/text_primary</item>
+
+        
+        <item name="colorSurface">@color/bg_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        
+        <item name="colorError">@color/status_danger</item>
+        <item name="colorOnError">@color/text_primary</item>
+
+        
+        <item name="android:statusBarColor">@color/bg_deepest</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        
+        <item name="android:navigationBarColor">@color/bg_deepest</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:windowTranslucentStatus">false</item>
+
+        
+        <item name="android:windowBackground">@color/bg_deepest</item>
+
+        
+
+        
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_disabled</item>
+
+        
+        <item name="rippleColor">@color/accent_primary</item>
+
+        
+        <item name="materialCardViewStyle">@style/AegisDrive.CardView</item>
+        <item name="textInputStyle">@style/AegisDrive.TextInputLayout</item>
+        <item name="materialButtonStyle">@style/AegisDrive.Button.Primary</item>
+
+    </style>
+</resources>
