@@ -13,9 +13,14 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.util.Calendar
 
 class HomeFragment : Fragment() {
+
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,6 +32,9 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
 
         // 1. Initialize Greeting
         updateGreeting(view)
@@ -43,13 +51,31 @@ class HomeFragment : Fragment() {
         val tvGreeting = view.findViewById<TextView>(R.id.tvGreeting)
         val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         
-        val greeting = when (hour) {
+        val greetingPrefix = when (hour) {
             in 5..11 -> "Good Morning"
             in 12..16 -> "Good Afternoon"
             in 17..20 -> "Good Evening"
             else -> "Good Night"
         }
-        tvGreeting.text = greeting
+
+        val user = auth.currentUser
+        if (user != null) {
+            db.collection("drivers").document(user.uid).get()
+                .addOnSuccessListener { document ->
+                    if (isAdded && document != null && document.exists()) {
+                        val fullName = document.getString("fullName") ?: "Driver"
+                        val firstName = fullName.split(" ").firstOrNull() ?: "Driver"
+                        tvGreeting.text = "$greetingPrefix, $firstName"
+                    } else {
+                        tvGreeting.text = greetingPrefix
+                    }
+                }
+                .addOnFailureListener {
+                    if (isAdded) tvGreeting.text = greetingPrefix
+                }
+        } else {
+            tvGreeting.text = greetingPrefix
+        }
     }
 
     private fun updateDashboardUI(view: View, score: Int, time: String, alerts: Int, focus: Int, rating: Double) {

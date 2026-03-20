@@ -12,12 +12,23 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.auth.FirebaseAuth
+import androidx.appcompat.app.AlertDialog
+import com.google.firebase.firestore.FirebaseFirestore
+import com.malik.aegisdrive.DriverProfile
 
 class SignUpActivity : AppCompatActivity() {
+
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
+    private var loadingDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
+
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
 
         // Input Layouts (for error display)
         val nameLayout = findViewById<TextInputLayout>(R.id.nameInputLayout)
@@ -87,17 +98,60 @@ class SignUpActivity : AppCompatActivity() {
 
             if (isValid) {
                 hideKeyboard()
-                // TODO: Connect to Django backend
-                Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, LoginActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+                showLoadingDialog("Creating your Aegis account...")
+                
+                auth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this) { task ->
+                        if (task.isSuccessful) {
+                            val user = auth.currentUser
+                            val profile = DriverProfile(
+                                uid = user?.uid ?: "",
+                                fullName = name,
+                                email = email,
+                                phone = etPhone.text.toString().trim()
+                            )
+                            
+                            // Save to Firestore
+                            db.collection("drivers").document(profile.uid)
+                                .set(profile)
+                                .addOnSuccessListener {
+                                    loadingDialog?.dismiss()
+                                    Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                                    val intent = Intent(this, LoginActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    startActivity(intent)
+                                    finish()
+                                }
+                                .addOnFailureListener { e ->
+                                    loadingDialog?.dismiss()
+                                    Toast.makeText(this, "Profile error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    startActivity(Intent(this, LoginActivity::class.java))
+                                    finish()
+                                }
+                        } else {
+                            loadingDialog?.dismiss()
+                            Toast.makeText(baseContext, "Registration failed: ${task.exception?.message}",
+                                Toast.LENGTH_SHORT).show()
+                        }
+                    }
             }
         }
 
         tvGoToLogin.setOnClickListener { finish() }
         btnBack.setOnClickListener { finish() }
+    }
+
+    private fun showLoadingDialog(message: String) {
+        val builder = AlertDialog.Builder(this)
+        val dialogView = layoutInflater.inflate(R.layout.dialog_loading, null)
+        dialogView.findViewById<TextView>(R.id.loadingText).text = message
+        
+        builder.setView(dialogView)
+        builder.setCancelable(false)
+        
+        loadingDialog = builder.create()
+        loadingDialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        loadingDialog?.show()
     }
 
     private fun hideKeyboard() {
