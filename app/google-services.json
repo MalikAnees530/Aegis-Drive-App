@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "835441318946",
+    "project_id": "aegisdrive-58512",
+    "storage_bucket": "aegisdrive-58512.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:835441318946:android:c8ea08870337eb0466be7b",
+        "android_client_info": {
+          "package_name": "com.malik.aegisdrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGxNF35YOS0zWnRg41nS7D1ZqwkPoz2As"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

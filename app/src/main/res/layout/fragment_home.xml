@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_deepest"
     android:fillViewport="true"
-    android:scrollbars="none">
+    android:scrollbars="none"
+    tools:ignore="HardcodedText,SpUsage,SmallSp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="20dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="24dp">
+        android:paddingHorizontal="24dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="40dp">
 
-        <!-- HEADER SECTION -->
         <TextView
             android:id="@+id/tvGreeting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Good Night"
+            android:text="System Initialized"
             android:textColor="@color/text_disabled"
             android:textSize="12sp"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.05"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -31,22 +32,23 @@
             android:id="@+id/tvScreenTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Dashboard"
+            android:text="AEGIS COMMAND"
             android:textColor="@color/text_primary"
             android:textSize="26sp"
             android:textStyle="bold"
-            android:letterSpacing="-0.03"
+            android:fontFamily="sans-serif-condensed"
+            android:letterSpacing="0.05"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvGreeting" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnNotif"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="10dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="12dp"
             app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
             app:strokeWidth="1dp"
             app:layout_constraintEnd_toStartOf="@id/btnSettings"
@@ -57,16 +59,17 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="🔔"
-                android:textSize="16sp" />
+                android:textColor="@color/status_warning"
+                android:textSize="18sp" />
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/btnSettings"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
             app:strokeWidth="1dp"
             app:layout_constraintEnd_toEndOf="parent"
@@ -77,318 +80,326 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="⚙"
-                android:textSize="16sp" />
+                android:textSize="20sp"
+                android:textColor="@color/text_disabled"/>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- MAIN SCORE CARD (Aegis Eye Style) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/scoreCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
+            android:layout_marginTop="28dp"
             app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="28dp"
-            app:cardElevation="4dp"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1.5dp"
+            app:strokeWidth="1dp"
             app:layout_constraintTop_toBottomOf="@id/tvScreenTitle">
 
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="20dp">
+                android:padding="24dp">
 
-                <!-- High-Tech Score Gauge -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/scoreRingContainer"
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
-                    app:cardBackgroundColor="@color/bg_deepest"
-                    app:cardCornerRadius="44dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/accent_primary"
-                    app:strokeWidth="4dp"
+                <TextView
+                    android:id="@+id/tvScoreLabelTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="LAST SESSION SCORE"
+                    android:textColor="@color/text_disabled"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
                     app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent">
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/tvScoreValue"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="--"
-                            android:textColor="@color/text_primary"
-                            android:textSize="28sp"
-                            android:textStyle="bold"
-                            android:includeFontPadding="false" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="/100"
-                            android:textColor="@color/accent_primary"
-                            android:textSize="10sp"
-                            android:alpha="0.7" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                    app:layout_constraintTop_toTopOf="parent" />
 
-                <!-- Dynamic Status Badge -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/statusBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="18dp"
                     app:cardBackgroundColor="#1A6ABF69"
-                    app:cardCornerRadius="20dp"
+                    app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="#336ABF69"
-                    app:strokeWidth="1dp"
-                    app:layout_constraintStart_toEndOf="@id/scoreRingContainer"
-                    app:layout_constraintTop_toTopOf="@id/scoreRingContainer">
+                    app:strokeWidth="0dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="5dp">
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:gravity="center_vertical">
                         <View
                             android:id="@+id/statusIndicator"
                             android:layout_width="6dp"
                             android:layout_height="6dp"
-                            android:background="@color/status_safe"
-                            android:layout_marginEnd="6dp" />
+                            android:background="@drawable/ic_launcher_background"
+                            android:backgroundTint="@color/status_safe"
+                            android:layout_marginEnd="4dp" />
                         <TextView
                             android:id="@+id/tvStatusText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="SCANNING"
+                            android:text="SAFE"
                             android:textColor="@color/status_safe"
                             android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="0.1" />
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView
-                    android:id="@+id/tvScoreLabel"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:id="@+id/scoreContainer"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="18dp"
-                    android:layout_marginTop="8dp"
-                    android:text="Safety Intelligence"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toEndOf="@id/scoreRingContainer"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/statusBadge" />
+                    android:orientation="horizontal"
+                    android:gravity="bottom"
+                    android:layout_marginTop="4dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvScoreLabelTitle">
+
+                    <TextView
+                        android:id="@+id/tvScoreValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="100"
+                        android:textColor="@color/status_safe"
+                        android:textSize="56sp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="/100"
+                        android:textColor="@color/text_disabled"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginBottom="8dp" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvScoreSub"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="18dp"
-                    android:layout_marginTop="2dp"
-                    android:text="Aegis System Online"
-                    android:textColor="@color/text_disabled"
-                    android:textSize="12sp"
-                    app:layout_constraintStart_toEndOf="@id/scoreRingContainer"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvScoreLabel" />
-
-                <!-- PROGRESS ROW -->
-                <ProgressBar
-                    android:id="@+id/scoreProgress"
-                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-                    android:layout_width="0dp"
-                    android:layout_height="4dp"
-                    android:layout_marginStart="18dp"
-                    android:layout_marginTop="12dp"
-                    android:max="100"
-                    android:progress="0"
-                    android:progressTint="@color/accent_primary"
-                    android:progressBackgroundTint="@color/bg_elevated"
-                    app:layout_constraintStart_toEndOf="@id/scoreRingContainer"
-                    app:layout_constraintEnd_toStartOf="@id/tvProgressVal"
-                    app:layout_constraintTop_toBottomOf="@id/tvScoreSub" />
-
-                <TextView
-                    android:id="@+id/tvProgressVal"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:text="--%"
-                    android:textColor="@color/accent_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="@id/scoreProgress"
-                    app:layout_constraintBottom_toBottomOf="@id/scoreProgress" />
+                    android:text="Elite Driving Level Detected."
+                    android:textColor="@color/text_disabled"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/scoreContainer" />
 
-                <!-- PREMIUM ACTION BUTTON -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnStartMonitoring"
+                <ProgressBar
+                    android:id="@+id/scoreProgress"
+                    style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
-                    android:layout_marginTop="28dp"
-                    android:text="Begin Monitoring Session"
-                    android:textAllCaps="false"
-                    android:textSize="17sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.02"
-                    android:textColor="@color/bg_deepest"
-                    android:includeFontPadding="false"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:paddingVertical="0dp"
-                    app:backgroundTint="@color/accent_primary"
-                    app:cornerRadius="18dp"
-                    app:icon="@drawable/ic_monitor"
-                    app:iconSize="24dp"
-                    app:iconPadding="12dp"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/bg_deepest"
-                    app:layout_constraintTop_toBottomOf="@id/scoreRingContainer" />
+                    android:layout_height="6dp"
+                    android:layout_marginTop="20dp"
+                    android:max="100"
+                    android:progress="100"
+                    android:progressTint="@color/status_safe"
+                    android:progressBackgroundTint="@color/border_subtle"
+                    app:layout_constraintTop_toBottomOf="@id/tvScoreSub" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- 4 METRICS HUD GRID -->
-        <androidx.constraintlayout.helper.widget.Flow
-            android:id="@+id/metricsFlow"
+        <LinearLayout
+            android:id="@+id/metricsRow1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="16dp"
+            android:weightSum="2"
+            app:layout_constraintTop_toBottomOf="@id/scoreCard">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏱" android:textSize="20sp" android:layout_marginBottom="8dp"/>
+                    <TextView android:id="@+id/tvDriveTimeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0s" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Drive Duration" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚠" android:textSize="20sp" android:layout_marginBottom="8dp"/>
+                    <TextView android:id="@+id/tvAlertsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="@color/status_warning" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Alerts Fired" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/metricsRow2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:weightSum="2"
+            app:layout_constraintTop_toBottomOf="@id/metricsRow1">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⭐" android:textColor="@color/status_warning" android:textSize="20sp" android:layout_marginBottom="8dp"/>
+                    <TextView android:id="@+id/tvRatingValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5.0" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Safety Rating" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="👁" android:textSize="20sp" android:layout_marginBottom="8dp"/>
+                    <TextView android:id="@+id/tvFocusValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="100%" android:textColor="@color/accent_primary" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Est. Focus Level" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAIStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardBackgroundColor="@color/bg_surface"
+            app:cardCornerRadius="16dp"
+            app:strokeColor="@color/border_subtle"
+            app:strokeWidth="1dp"
+            app:layout_constraintTop_toBottomOf="@id/metricsRow2">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🧠" android:textSize="22sp" android:layout_marginEnd="12dp"/>
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="AI Engine Status" android:textColor="@color/text_primary" android:textSize="14sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tvAIStatusMessage" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Checking TFLite Model..." android:textColor="@color/text_disabled" android:textSize="11sp"/>
+                </LinearLayout>
+                <TextView
+                    android:id="@+id/tvAIStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ONLINE"
+                    android:textColor="@color/status_safe"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:id="@+id/historyHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="32dp"
+            app:layout_constraintTop_toBottomOf="@id/cardAIStatus">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="SESSION HISTORY"
+                android:textColor="@color/text_disabled"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1" />
+            <TextView
+                android:id="@+id/btnViewAllSessions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VIEW ALL"
+                android:textColor="@color/accent_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:paddingVertical="4dp"
+                android:paddingStart="12dp" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardRecentSession"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            app:constraint_referenced_ids="metricDriveTime,metricAlerts,metricFocus,metricRating"
-            app:flow_maxElementsWrap="2"
-            app:flow_wrapMode="aligned"
-            app:flow_horizontalGap="12dp"
-            app:flow_verticalGap="12dp"
-            app:layout_constraintTop_toBottomOf="@id/scoreCard" />
-
-        <!-- Metric 1: Drive Time -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/metricDriveTime"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
             app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏱" android:textSize="22sp" android:layout_marginBottom="10dp"/>
-                <TextView android:id="@+id/tvDriveTimeValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--h --m" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Drive Time" android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="4dp"/>
-                <ProgressBar android:id="@+id/pbDriveTime" style="@style/Widget.AppCompat.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="12dp" android:progressTint="@color/accent_primary" android:progressBackgroundTint="@color/bg_elevated"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Metric 2: Alerts -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/metricAlerts"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⚡" android:textSize="22sp" android:layout_marginBottom="10dp"/>
-                <TextView android:id="@+id/tvAlertsValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--" android:textColor="@color/status_warning" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Alerts Today" android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="4dp"/>
-                <ProgressBar android:id="@+id/pbAlerts" style="@style/Widget.AppCompat.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="12dp" android:progressTint="@color/status_warning" android:progressBackgroundTint="@color/bg_elevated"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Metric 3: Focus -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/metricFocus"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="👁" android:textSize="22sp" android:layout_marginBottom="10dp"/>
-                <TextView android:id="@+id/tvFocusValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="--%" android:textColor="@color/status_safe" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Focus Level" android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="4dp"/>
-                <ProgressBar android:id="@+id/pbFocus" style="@style/Widget.AppCompat.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="12dp" android:progressTint="@color/status_safe" android:progressBackgroundTint="@color/bg_elevated"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Metric 4: Rating -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/metricRating"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="★" android:textSize="22sp" android:layout_marginBottom="10dp"/>
-                <TextView android:id="@+id/tvRatingValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="-.--" android:textColor="@color/text_primary" android:textSize="18sp" android:textStyle="bold" android:includeFontPadding="false"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Safety Rating" android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="4dp"/>
-                <ProgressBar android:id="@+id/pbRating" style="@style/Widget.AppCompat.ProgressBar.Horizontal" android:layout_width="match_parent" android:layout_height="3dp" android:layout_marginTop="12dp" android:progressTint="@color/accent_light" android:progressBackgroundTint="@color/bg_elevated"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- RECENT ALERTS SECTION -->
-        <TextView
-            android:id="@+id/tvAlertsHeader"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:text="Recent Intelligence"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/metricsFlow" />
-
-        <TextView
-            android:id="@+id/tvViewAll"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="View all →"
-            android:textColor="@color/accent_primary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/tvAlertsHeader"
-            app:layout_constraintBottom_toBottomOf="@id/tvAlertsHeader" />
-
-        <!-- Alert Cards (Standardized) -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/alert1"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="2dp"
+            app:cardCornerRadius="16dp"
             app:strokeColor="@color/border_subtle"
             app:strokeWidth="1dp"
-            app:layout_constraintTop_toBottomOf="@id/tvAlertsHeader">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp">
-                <com.google.android.material.card.MaterialCardView android:layout_width="44dp" android:layout_height="44dp" app:cardBackgroundColor="#1AFFB74D" app:cardCornerRadius="12dp" app:cardElevation="0dp" android:layout_marginEnd="16dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="⚠" android:textSize="18sp"/>
+            app:layout_constraintTop_toBottomOf="@id/historyHeader">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical">
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    app:cardBackgroundColor="@color/bg_elevated"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    android:layout_marginEnd="16dp">
+                    <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="📊" android:textSize="18sp"/>
                 </com.google.android.material.card.MaterialCardView>
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="System Initialized" android:textColor="@color/text_secondary" android:textSize="13sp" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Shields active · 00:00:00" android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="3dp"/>
+                    <TextView android:id="@+id/tvHistoryTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="No Sessions Yet" android:textColor="@color/text_primary" android:textSize="14sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tvHistoryDate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Complete a drive to see data." android:textColor="@color/text_disabled" android:textSize="11sp" android:layout_marginTop="2dp"/>
                 </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="READY" android:textColor="@color/status_warning" android:textSize="9sp" android:textStyle="bold" android:letterSpacing="0.05"/>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStartMonitoring"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="24dp"
+            android:text="LAUNCH AI MONITOR"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:textColor="@color/colorOnPrimary"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:backgroundTint="@color/colorPrimary"
+            app:cornerRadius="20dp"
+            app:strokeWidth="0dp"
+            app:layout_constraintTop_toBottomOf="@id/cardRecentSession" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

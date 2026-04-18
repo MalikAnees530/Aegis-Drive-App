@@ -1,82 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <!-- ============================================ -->
-    <!-- AEGISDRIVE - INK WASH PREMIUM DARK PALETTE   -->
+    <!-- AEGISDRIVE - CLEAN LIGHT PREMIUM PALETTE     -->
     <!-- ============================================ -->
 
     <!-- === BACKGROUND COLORS === -->
-    <!-- The deepest background. Used for the main screen background. -->
-    <color name="bg_deepest">#1A1A1A</color>
-
-    <!-- Slightly lighter dark. Used for Cards, Dialogs, Bottom Nav. -->
-    <color name="bg_surface">#2C2C2C</color>
-
-    <!-- Even lighter dark. Used for input fields, nested cards. -->
-    <color name="bg_elevated">#3A3A3A</color>
-
-    <!-- The charcoal gray from the palette. -->
-    <color name="charcoal">#4A4A4A</color>
+    <color name="bg_deepest">#F5F7FA</color>
+    <color name="bg_surface">#FFFFFF</color>
+    <color name="bg_elevated">#F0F3F7</color>
+    <color name="charcoal">#E0E5EC</color>
 
     <!-- === TEXT COLORS === -->
-    <!-- Primary text — Soft Ivory. Use for headings, important labels. -->
-    <color name="text_primary">#FFFFE3</color>
-
-    <!-- Secondary text — Cool Gray. Use for subtitles, hints, captions. -->
-    <color name="text_secondary">#CBCBCB</color>
-
-    <!-- Disabled / placeholder text. -->
-    <color name="text_disabled">#757575</color>
+    <color name="text_primary">#0F172A</color>
+    <color name="text_secondary">#475569</color>
+    <color name="text_disabled">#94A3B8</color>
 
     <!-- === ACCENT / ACTION COLORS === -->
-    <!-- Primary accent — Slate Blue. Used for buttons, links, active icons. -->
-    <color name="accent_primary">#6D8196</color>
-
-    <!-- Lighter version of accent for hover/pressed states. -->
-    <color name="accent_light">#8FA3B5</color>
-
-    <!-- Darker version of accent for pressed/ripple states. -->
-    <color name="accent_dark">#4E6070</color>
+    <color name="accent_primary">#3B82F6</color>
+    <color name="accent_light">#7DD3FC</color>
+    <color name="accent_dark">#0284C7</color>
 
     <!-- === STATUS / SEMANTIC COLORS === -->
-    <!-- Safe status — soft green. -->
-    <color name="status_safe">#6ABF69</color>
-
-    <!-- Warning status — amber. -->
-    <color name="status_warning">#FFB74D</color>
-
-    <!-- Danger / alert status — soft red. -->
-    <color name="status_danger">#EF5350</color>
+    <color name="status_safe">#22C55E</color>
+    <color name="status_warning">#F59E0B</color>
+    <color name="status_danger">#EF4444</color>
 
     <!-- === BORDER / DIVIDER COLORS === -->
-    <!-- Used for card outlines, dividers, input field borders. -->
-    <color name="border_subtle">#3F3F3F</color>
-
-    <!-- Slightly more visible border. -->
-    <color name="border_visible">#555555</color>
+    <color name="border_subtle">#E2E8F0</color>
+    <color name="border_visible">#CBD5E1</color>
 
     <!-- === BOTTOM NAVIGATION === -->
-    <color name="nav_background">#242424</color>
-    <color name="nav_icon_active">#FFFFE3</color>
-    <color name="nav_icon_inactive">#6E6E6E</color>
+    <color name="nav_background">#FFFFFF</color>
+    <color name="nav_icon_active">#3B82F6</color>
+    <color name="nav_icon_inactive">#94A3B8</color>
 
     <!-- === SYSTEM / MATERIAL REQUIRED COLORS === -->
-    <!-- These are required by Material Design. Map them to our palette. -->
-    <color name="colorPrimary">#6D8196</color>
-    <color name="colorPrimaryVariant">#4E6070</color>
-    <color name="colorOnPrimary">#FFFFE3</color>
+    <color name="colorPrimary">#3B82F6</color>
+    <color name="colorPrimaryVariant">#0284C7</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
 
-    <color name="colorSecondary">#CBCBCB</color>
-    <color name="colorSecondaryVariant">#9E9E9E</color>
-    <color name="colorOnSecondary">#1A1A1A</color>
+    <color name="colorSecondary">#475569</color>
+    <color name="colorSecondaryVariant">#94A3B8</color>
+    <color name="colorOnSecondary">#FFFFFF</color>
 
-    <color name="colorBackground">#1A1A1A</color>
-    <color name="colorOnBackground">#FFFFE3</color>
+    <color name="colorBackground">#F5F7FA</color>
+    <color name="colorOnBackground">#0F172A</color>
 
-    <color name="colorSurface">#2C2C2C</color>
-    <color name="colorOnSurface">#FFFFE3</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#0F172A</color>
 
-    <color name="colorError">#EF5350</color>
-    <color name="colorOnError">#FFFFE3</color>
-
+    <color name="colorError">#EF4444</color>
+    <color name="colorOnError">#FFFFFF</color>
 </resources>

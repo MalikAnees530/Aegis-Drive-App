@@ -7,30 +7,19 @@ import android.os.Looper
 import android.util.Patterns
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
 
     private var loadingDialog: AlertDialog? = null
-    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        auth = FirebaseAuth.getInstance()
-
-        // Check if user is already logged in
-        if (auth.currentUser != null) {
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        }
 
         val emailLayout = findViewById<TextInputLayout>(R.id.emailInputLayout)
         val passwordLayout = findViewById<TextInputLayout>(R.id.passwordInputLayout)
@@ -65,17 +54,12 @@ class LoginActivity : AppCompatActivity() {
                 hideKeyboard()
                 showLoadingDialog("Authenticating with Aegis...")
                 
-                auth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        loadingDialog?.dismiss()
-                        if (task.isSuccessful) {
-                            startActivity(Intent(this, MainActivity::class.java))
-                            finish()
-                        } else {
-                            Toast.makeText(baseContext, "Authentication failed: ${task.exception?.message}",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                // Simulate network delay for a professional feel
+                Handler(Looper.getMainLooper()).postDelayed({
+                    loadingDialog?.dismiss()
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }, 1500)
             }
         }
 

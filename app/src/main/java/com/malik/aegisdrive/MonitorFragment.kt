@@ -1,50 +1,62 @@
 package com.malik.aegisdrive
 
+import com.google.firebase.firestore.FirebaseFirestore
 import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.Matrix
-import android.media.Ringtone
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
+import androidx.camera.core.*
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.core.app.ActivityCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.mediapipe.framework.image.BitmapImageBuilder
+import com.google.mediapipe.tasks.core.BaseOptions
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarker
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.sqrt
 
+@SuppressLint("SetTextI18n") 
 class MonitorFragment : Fragment() {
 
-    // ── Views ──────────────────────────────────────────────────────────────
     private lateinit var cameraPreview: PreviewView
+    private lateinit var faceOverlay: FaceOverlayView
     private lateinit var tvTimer: TextView
     private lateinit var tvFPS: TextView
+    private lateinit var tvLiveEar: TextView
+    private lateinit var tvLiveMar: TextView
     private lateinit var tvStatusOverlay: TextView
     private lateinit var tvDetectionIcon: TextView
     private lateinit var tvDetectionLabel: TextView
@@ -53,42 +65,43 @@ class MonitorFragment : Fragment() {
     private lateinit var tvDrowsiness: TextView
     private lateinit var tvAlertCount: TextView
     private lateinit var btnStopMonitor: MaterialButton
+    private lateinit var btnMuteAlarm: MaterialButton
     private lateinit var statusOverlay: MaterialCardView
     private lateinit var liveBadgeCard: MaterialCardView
     private lateinit var tvLiveText: TextView
     private lateinit var tvSafetyScore: TextView
     private lateinit var pbSafetyScore: ProgressBar
 
-    // ── Camera & AI ────────────────────────────────────────────────────────
     private var cameraExecutor: ExecutorService? = null
     private var tfliteInterpreter: Interpreter? = null
+    private var faceLandmarker: FaceLandmarker? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    // 🚀 STRICT STATE FLAG: AI only analyzes when this is true
+    private var mediaPlayer: MediaPlayer? = null
     private var isMonitoring = false
-
-    // ── Safety Engine ──────────────────────────────────────────────────────
     private var safetyScore = 100f
-    private var currentRingtone: Ringtone? = null
+    
     private var alertCount = 0
+    private var isAlarmActive = false 
+    private var isManuallyMuted = false 
+    private var muteTimestamp = 0L
+    private var framesWithoutFace = 0
+    private var closedEyeFrames = 0
+    private var openEyeFrames = 0
 
-    // Consecutive frame counters
-    private var consecutiveDangerFrames = 0
-    private var consecutiveWarnFrames = 0
-    private val DANGER_THRESHOLD = 5
-    private val WARN_THRESHOLD   = 4
+    private val sequenceLength = 30
+    private val frameSequence = ArrayDeque<FloatArray>(sequenceLength)
+    private val predictionHistory = ArrayDeque<Int>(5) 
+    
+    private val rightEyeIdx = intArrayOf(33, 160, 158, 133, 153, 144)
+    private val leftEyeIdx = intArrayOf(362, 385, 387, 263, 373, 380)
+    private val lipsIdx = intArrayOf(78, 308, 13, 14)
 
-    // ── Model ──────────────────────────────────────────────────────────────
-    private val MODEL_INPUT_SIZE = 224
-    private val NUM_CLASSES = 3
-    private val LABELS = arrayOf("Eyes Closed", "Normal", "Yawning")
-    private val MODEL_FILE = "aegis_drive_model.tflite"
+    private val classLabels = arrayOf("Normal", "Drowsiness (Eye Close)", "Yawning")
+    private val lstmModelFile = "aegis_drive_model.tflite"
 
-    // ── FPS Tracking ───────────────────────────────────────────────────────
     private var frameCount = 0
     private var lastFpsTime = System.currentTimeMillis()
-
-    // ── Timer ──────────────────────────────────────────────────────────────
     private val timerHandler = Handler(Looper.getMainLooper())
     private var elapsedSeconds = 0
     private val timerRunnable = object : Runnable {
@@ -98,7 +111,7 @@ class MonitorFragment : Fragment() {
             val h = elapsedSeconds / 3600
             val m = (elapsedSeconds % 3600) / 60
             val s = elapsedSeconds % 60
-            tvTimer.text = String.format("%02d:%02d:%02d", h, m, s)
+            tvTimer.text = String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
             timerHandler.postDelayed(this, 1000)
         }
     }
@@ -108,10 +121,6 @@ class MonitorFragment : Fragment() {
         private const val CAMERA_PERMISSION_CODE = 200
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // LIFECYCLE (FIXED AUTO-START BUG)
-    // ══════════════════════════════════════════════════════════════════════
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_monitor, container, false)
     }
@@ -119,44 +128,127 @@ class MonitorFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
-        loadTFLiteModel()
+        
+        pbSafetyScore.max = 100 
 
-        // 🚀 BUG FIX: Explicitly enforce IDLE state on creation.
+        // 🚀 SAFE PROGRAMMATIC ADDITION: Prevent duplicates and lag
+        val parent = cameraPreview.parent as ViewGroup
+        var existingOverlay: FaceOverlayView? = null
+        for (i in 0 until parent.childCount) {
+            if (parent.getChildAt(i) is FaceOverlayView) {
+                existingOverlay = parent.getChildAt(i) as FaceOverlayView
+                break
+            }
+        }
+
+        if (existingOverlay != null) {
+            faceOverlay = existingOverlay
+        } else {
+            faceOverlay = FaceOverlayView(requireContext())
+            faceOverlay.layoutParams = ConstraintLayout.LayoutParams(
+                ConstraintLayout.LayoutParams.MATCH_PARENT,
+                ConstraintLayout.LayoutParams.MATCH_PARENT
+            )
+            parent.addView(faceOverlay)
+        }
+        faceOverlay.bringToFront()
+        faceOverlay.elevation = 100f
+
+        setupAudioEngine()
+        loadAIModels()
+
         isMonitoring = false
         setUIMonitoringState(false)
+        btnMuteAlarm.visibility = View.GONE
 
-        // Only start the visual camera stream so the user can frame themselves
-        if (hasCameraPermission()) {
-            startCamera()
-        } else {
-            requestCameraPermission()
-        }
+        if (hasCameraPermission()) startCamera() else requestCameraPermission()
 
         btnStopMonitor.setOnClickListener {
             if (!hasCameraPermission()) {
                 requestCameraPermission()
                 return@setOnClickListener
             }
-            if (isMonitoring) {
-                stopMonitoring()
-            } else {
-                startMonitoring()
+            if (isMonitoring) stopMonitoring() else startMonitoring()
+        }
+
+        btnMuteAlarm.setOnClickListener {
+            isManuallyMuted = true 
+            muteTimestamp = System.currentTimeMillis() 
+            stopAudioAlarm()
+        }
+    }
+
+    private fun setupAudioEngine() {
+        try {
+            val ringtoneUri = RingtoneManager.getActualDefaultRingtoneUri(requireContext(), RingtoneManager.TYPE_RINGTONE)
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(requireContext(), ringtoneUri)
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM) 
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                setAudioAttributes(audioAttributes)
+                isLooping = true 
+                prepare()
+            }
+        } catch (e: Exception) { 
+            Log.e(TAG, "Ringtone Engine Error: ${e.message}")
+            try {
+                val alertUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                mediaPlayer?.setDataSource(requireContext(), alertUri)
+                mediaPlayer?.prepare()
+            } catch (e2: Exception) { Log.e(TAG, "Complete Audio Failure") }
+        }
+    }
+
+    private fun playAudioAlarm() {
+        val prefs = requireActivity().getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+        val soundEnabled = prefs.getBoolean("alert_sound", true)
+        val vibrationEnabled = prefs.getBoolean("vibration", true)
+
+        if (vibrationEnabled) {
+            val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            if (vibrator.hasVibrator()) {
+                vibrator.vibrate(android.os.VibrationEffect.createOneShot(500, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
             }
         }
+
+        if (!isAlarmActive) {
+            isAlarmActive = true
+            if (soundEnabled) mediaPlayer?.start()
+            
+            activity?.runOnUiThread { 
+                btnMuteAlarm.visibility = View.VISIBLE 
+                alertCount++
+                tvAlertCount.text = alertCount.toString()
+            }
+        } else if (soundEnabled && mediaPlayer?.isPlaying == false && !isManuallyMuted) {
+            mediaPlayer?.start()
+        }
+    }
+
+    private fun stopAudioAlarm() {
+        isAlarmActive = false
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer?.pause()
+            mediaPlayer?.seekTo(0)
+        }
+        activity?.runOnUiThread { btnMuteAlarm.visibility = View.GONE }
     }
 
     override fun onResume() {
         super.onResume()
-        // Ensure that if they tab away and come back, it doesn't automatically start analyzing
-        if (!isMonitoring) {
-            setUIMonitoringState(false)
-        }
+        if (!isMonitoring) setUIMonitoringState(false)
     }
 
     override fun onPause() {
         super.onPause()
-        // Stop monitoring immediately if the app goes to the background
         stopMonitoring()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (isMonitoring) stopMonitoring()
     }
 
     override fun onDestroyView() {
@@ -166,21 +258,26 @@ class MonitorFragment : Fragment() {
         cameraExecutor?.shutdown()
         cameraExecutor = null
         tfliteInterpreter?.close()
+        faceLandmarker?.close()
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // MONITORING CONTROL
-    // ══════════════════════════════════════════════════════════════════════
 
     private fun startMonitoring() {
         isMonitoring = true
         elapsedSeconds = 0
         alertCount = 0
         safetyScore = 100f
-        consecutiveDangerFrames = 0
-        consecutiveWarnFrames = 0
         frameCount = 0
         lastFpsTime = System.currentTimeMillis()
+        isManuallyMuted = false
+        isAlarmActive = false
+        closedEyeFrames = 0
+        openEyeFrames = 0
+        framesWithoutFace = 0
+        frameSequence.clear() 
+        predictionHistory.clear()
+        faceOverlay.clear()
 
         tvAlertCount.text = "0"
         tvTimer.text = "00:00:00"
@@ -193,62 +290,91 @@ class MonitorFragment : Fragment() {
     }
 
     private fun stopMonitoring() {
+        if (!isMonitoring) return
+
+        // 🚀 SYNC: Capture and Save Data before closing (Industry Standard)
+        val finalScore = safetyScore.toInt()
+        val finalAlerts = alertCount
+        val finalTime = elapsedSeconds
+
+        try {
+            val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            val formatter = SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault())
+            val currentTime = formatter.format(Date())
+
+            val currentSessionNumber = prefs.getInt("TOTAL_SESSIONS", 0) + 1
+            val cumulativeSeconds = prefs.getInt("TOTAL_DRIVE_TIME", 0) + finalTime
+            val cumulativeScoreSum = prefs.getInt("TOTAL_SCORE_SUM", 0) + finalScore
+
+            prefs.edit().apply {
+                putInt("LAST_SCORE", finalScore)
+                putInt("TOTAL_ALERTS", finalAlerts)
+                putInt("DRIVE_SECONDS", finalTime)
+                putString("LAST_DRIVE_DATE", currentTime)
+                putInt("TOTAL_SESSIONS", currentSessionNumber)
+                
+                // 🚀 CUMULATIVE STATS FOR SETTINGS
+                putInt("TOTAL_DRIVE_TIME", cumulativeSeconds)
+                putInt("TOTAL_SCORE_SUM", cumulativeScoreSum)
+                apply()
+            }
+
+            val db = FirebaseFirestore.getInstance()
+            val sessionData = hashMapOf(
+                "sessionNumber" to currentSessionNumber,
+                "score" to finalScore,
+                "alerts" to finalAlerts,
+                "duration" to finalTime,
+                "timestamp" to currentTime,
+                "dateObject" to com.google.firebase.Timestamp.now()
+            )
+            db.collection("DriveSessions").add(sessionData)
+
+        } catch (e: Exception) { Log.e(TAG, "Sync Failed: ${e.message}") }
+
         isMonitoring = false
         timerHandler.removeCallbacks(timerRunnable)
-        currentRingtone?.stop()
         setUIMonitoringState(false)
+        stopAudioAlarm()
+        btnMuteAlarm.visibility = View.GONE
+        faceOverlay.clear()
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // UI STATE & LIVE BADGE SYNC
-    // ══════════════════════════════════════════════════════════════════════
 
     private fun setUIMonitoringState(isActive: Boolean) {
         if (isActive) {
-            // ── ACTIVE: Green Badge, Red Stop Button ──────────────────────
             btnStopMonitor.text = "STOP MONITORING"
-            btnStopMonitor.setTextColor(Color.parseColor("#EF5350"))
-            btnStopMonitor.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#CC0D1B26"))
+            btnStopMonitor.setTextColor("#EF5350".toColorInt())
+            btnStopMonitor.backgroundTintList = ColorStateList.valueOf("#CC0D1B26".toColorInt())
             btnStopMonitor.strokeWidth = 2
-            btnStopMonitor.strokeColor = ColorStateList.valueOf(Color.parseColor("#EF5350"))
-
-            // 🚀 LIVE BADGE SYNC (GREEN)
-            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#AA22C55E")))
+            btnStopMonitor.strokeColor = ColorStateList.valueOf("#EF5350".toColorInt())
+            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AA22C55E".toColorInt()))
             tvLiveText.text = "LIVE"
-
             setStatus("● SAFE", "#6ABF69")
         } else {
-            // ── IDLE: Red Badge, Blue Begin Button ────────────────────────
             btnStopMonitor.text = "BEGIN MONITORING"
-            btnStopMonitor.setTextColor(Color.parseColor("#0F172A"))
-            btnStopMonitor.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
+            btnStopMonitor.setTextColor("#0F172A".toColorInt())
+            btnStopMonitor.backgroundTintList = ColorStateList.valueOf("#38BDF8".toColorInt())
             btnStopMonitor.strokeWidth = 0
-
-            // 🚀 LIVE BADGE SYNC (RED)
-            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#AAEF4444")))
+            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AAEF4444".toColorInt()))
             tvLiveText.text = "OFFLINE"
-
-            // Reset UI
             setStatus("● STANDBY", "#6D8196")
             tvDetectionIcon.text = "–"
             tvDetectionLabel.text = "Waiting..."
-            tvDetectionLabel.setTextColor(Color.parseColor("#6D8196"))
+            tvDetectionLabel.setTextColor("#6D8196".toColorInt())
             tvConfidence.text = "–"
-            tvConfidence.setTextColor(Color.parseColor("#6D8196"))
+            tvConfidence.setTextColor("#6D8196".toColorInt())
             tvEyeState.text = "–"
-            tvEyeState.setTextColor(Color.parseColor("#6D8196"))
+            tvEyeState.setTextColor("#6D8196".toColorInt())
             tvDrowsiness.text = "–"
-            tvDrowsiness.setTextColor(Color.parseColor("#6D8196"))
+            tvDrowsiness.setTextColor("#6D8196".toColorInt())
+            tvLiveEar.text = "EAR: 0.00"
+            tvLiveMar.text = "MAR: 0.00"
             tvFPS.text = "0 FPS"
             tvTimer.text = "00:00:00"
             safetyScore = 100f
             updateSafetyUI()
         }
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // CAMERA — High-Speed Dual Stream Architecture
-    // ══════════════════════════════════════════════════════════════════════
 
     private fun startCamera() {
         if (cameraExecutor == null || cameraExecutor!!.isShutdown) {
@@ -260,40 +386,26 @@ class MonitorFragment : Fragment() {
             try {
                 cameraProvider = cameraProviderFuture.get()
 
-                // 1. HD Preview for the screen
-                val preview = Preview.Builder()
-                    .setTargetResolution(Size(1080, 1920))
+                // 🚀 SMOOTH: Your original Resolution Selector logic
+                val previewResolution = ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
                     .build()
-                    .also { it.setSurfaceProvider(cameraPreview.surfaceProvider) }
+                val preview = Preview.Builder().setResolutionSelector(previewResolution).build().also { it.setSurfaceProvider(cameraPreview.surfaceProvider) }
 
-                // 2. Optimized Analyzer for AI (Prevents FPS Lag)
+                val analysisResolution = ResolutionSelector.Builder()
+                    .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                    .build()
                 val imageAnalyzer = ImageAnalysis.Builder()
-                    .setTargetResolution(Size(480, 640))
+                    .setResolutionSelector(analysisResolution)
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
-                    .also { analysis ->
-                        analysis.setAnalyzer(cameraExecutor!!) { imageProxy ->
-                            analyzeFrame(imageProxy)
-                        }
-                    }
+                    .also { analysis -> analysis.setAnalyzer(cameraExecutor!!) { imageProxy -> analyzeFrame(imageProxy) } }
 
                 cameraProvider?.unbindAll()
-                cameraProvider?.bindToLifecycle(
-                    viewLifecycleOwner,
-                    CameraSelector.DEFAULT_FRONT_CAMERA,
-                    preview,
-                    imageAnalyzer
-                )
-
-            } catch (e: Exception) {
-                Log.e(TAG, "Camera bind failed: ${e.message}")
-            }
+                cameraProvider?.bindToLifecycle(viewLifecycleOwner, CameraSelector.DEFAULT_FRONT_CAMERA, preview, imageAnalyzer)
+            } catch (e: Exception) { Log.e(TAG, "Camera bind failed: ${e.message}") }
         }, ContextCompat.getMainExecutor(requireContext()))
     }
-
-    // ══════════════════════════════════════════════════════════════════════
-    // AI ANALYSIS (FIXED FALSE YAWN LOGIC)
-    // ══════════════════════════════════════════════════════════════════════
 
     private fun analyzeFrame(imageProxy: ImageProxy) {
         if (!isMonitoring) {
@@ -311,206 +423,239 @@ class MonitorFragment : Fragment() {
                 activity?.runOnUiThread { tvFPS.text = "$fps FPS" }
             }
 
-            val bitmap = imageProxy.toBitmap()
-            if (tfliteInterpreter != null) {
-                runTFLiteInference(bitmap)
-            }
+            val rawBitmap = imageProxy.toBitmap()
+            val argbBitmap = rawBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+            val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+            val rotatedBitmap = Bitmap.createBitmap(argbBitmap, 0, 0, argbBitmap.width, argbBitmap.height, matrix, true)
+            
+            val mpImage = BitmapImageBuilder(rotatedBitmap).build()
+            val result = faceLandmarker?.detect(mpImage)
 
-        } catch (e: Exception) {
-            Log.e(TAG, "Frame error: ${e.message}")
-        } finally {
-            imageProxy.close()
-        }
+            if (result != null && result.faceLandmarks().isNotEmpty()) {
+                framesWithoutFace = 0 
+                
+                val landmarks = result.faceLandmarks()[0]
+                val rightEyePoints = rightEyeIdx.map { landmarks[it] }
+                val leftEyePoints = leftEyeIdx.map { landmarks[it] }
+                val lipPoints = lipsIdx.map { landmarks[it] }
+
+                val rightEar = calculateEAR(rightEyePoints)
+                val leftEar = calculateEAR(leftEyePoints)
+                val avgEar = (rightEar + leftEar) / 2.0f
+                val mar = calculateMAR(lipPoints)
+
+                activity?.runOnUiThread {
+                    tvLiveEar.text = String.format(Locale.US, "EAR: %.2f", avgEar)
+                    tvLiveMar.text = String.format(Locale.US, "MAR: %.2f", mar)
+                }
+
+                val dynamicEarThreshold = if (mar > 0.40f) 0.15f else 0.20f
+                
+                if (avgEar < dynamicEarThreshold) {
+                    closedEyeFrames++
+                    openEyeFrames = 0
+                } else {
+                    openEyeFrames++
+                    closedEyeFrames = 0
+                }
+
+                activity?.runOnUiThread {
+                    if (closedEyeFrames >= 2) {
+                        tvEyeState.text = "Closed"
+                        tvEyeState.setTextColor("#EF5350".toColorInt()) 
+                    } else if (openEyeFrames >= 2) {
+                        tvEyeState.text = "Open"
+                        tvEyeState.setTextColor("#6ABF69".toColorInt()) 
+                    }
+                }
+
+                faceOverlay.updateData(leftEyePoints, rightEyePoints, lipPoints, rotatedBitmap.width, rotatedBitmap.height)
+
+                if (frameSequence.size == sequenceLength) frameSequence.removeFirst()
+                frameSequence.addLast(floatArrayOf(avgEar, mar))
+
+                if (frameSequence.size == sequenceLength) {
+                    runLSTMInference(avgEar, mar)
+                } else {
+                    activity?.runOnUiThread {
+                        tvDetectionLabel.text = "Tracking Face..."
+                        tvDetectionLabel.setTextColor("#38BDF8".toColorInt())
+                        tvConfidence.text = "${frameSequence.size}/30"
+                        tvConfidence.setTextColor("#38BDF8".toColorInt())
+                    }
+                }
+            } else {
+                framesWithoutFace++
+                if (framesWithoutFace > 5) {
+                    faceOverlay.clear() 
+                    activity?.runOnUiThread {
+                        tvDetectionLabel.text = "No Face Detected"
+                        tvDetectionLabel.setTextColor("#EF5350".toColorInt())
+                        tvConfidence.text = "-"
+                    }
+                }
+            }
+        } catch (e: Exception) { Log.e(TAG, "Analysis error: ${e.message}")
+        } finally { imageProxy.close() }
     }
 
-    private fun runTFLiteInference(bitmap: Bitmap) {
+    private fun runLSTMInference(currentEar: Float, currentMar: Float) {
         val interpreter = tfliteInterpreter ?: return
-
-        // 1. 🚀 THE "DASHBOARD ANGLE" CROP
-        // We push the crop slightly down by 10% so the mouth is always inside the AI's vision.
-        val minDim = minOf(bitmap.width, bitmap.height)
-        val startX = (bitmap.width - minDim) / 2
-        val startY = ((bitmap.height - minDim) * 0.10).toInt().coerceAtLeast(0)
-
-        val squareBitmap = Bitmap.createBitmap(bitmap, startX, startY, minDim, minDim)
-
-        // Mirror for front camera and resize to 224
-        val matrix = Matrix().apply { postScale(-1f, 1f, minDim / 2f, minDim / 2f) }
-        val flipped = Bitmap.createBitmap(squareBitmap, 0, 0, minDim, minDim, matrix, true)
-        val resized  = Bitmap.createScaledBitmap(flipped, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, true)
-
-        val inputBuffer = ByteBuffer
-            .allocateDirect(4 * MODEL_INPUT_SIZE * MODEL_INPUT_SIZE * 3)
-            .apply { order(ByteOrder.nativeOrder()) }
-
-        val pixels = IntArray(MODEL_INPUT_SIZE * MODEL_INPUT_SIZE)
-        resized.getPixels(pixels, 0, MODEL_INPUT_SIZE, 0, 0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE)
-
-        // 0.0 to 1.0 Normalization
-        for (pixel in pixels) {
-            inputBuffer.putFloat(((pixel shr 16) and 0xFF) / 255.0f)
-            inputBuffer.putFloat(((pixel shr 8)  and 0xFF) / 255.0f)
-            inputBuffer.putFloat((pixel          and 0xFF) / 255.0f)
-        }
-
         try {
-            val output = Array(1) { FloatArray(NUM_CLASSES) }
-            interpreter.run(inputBuffer, output)
-            val scores = output[0]
+            val inputTensor = interpreter.getInputTensor(0)
+            val expectedInputFloats = inputTensor.numElements() 
+            val outputTensor = interpreter.getOutputTensor(0)
+            val expectedOutputFloats = outputTensor.numElements()
 
-            // 2. 🚀 TRUSTING THE MODEL (FALSE YAWN FIX)
-            // Removed arbitrary thresholds that caused "Eyes Closed" to be falsely labeled as "Yawning".
-            // We now strictly trust the AI's Softmax maximum confidence.
-            val rawIndex = scores.indices.maxByOrNull { scores[it] } ?: 1
-            val confidence = (scores[rawIndex] * 100).toInt().coerceIn(0, 100)
+            val inputBuffer = ByteBuffer.allocateDirect(expectedInputFloats * 4).apply { order(ByteOrder.nativeOrder()) }
+            val outputBuffer = ByteBuffer.allocateDirect(expectedOutputFloats * 4).apply { order(ByteOrder.nativeOrder()) }
 
-            // 3. 🚀 ANTI-SPAM ALARM TRIGGER (State-Transition Based)
-            when (rawIndex) {
-                0 -> { // Eyes Closed detected
-                    consecutiveDangerFrames++
-                    consecutiveWarnFrames = 0
-
-                    // Trigger Alarm EXACTLY ONCE when the Danger Threshold is crossed.
-                    if (consecutiveDangerFrames == DANGER_THRESHOLD) {
-                        activity?.runOnUiThread { updateUI(0, confidence, playAlert = true) }
-                    } else if (consecutiveDangerFrames > DANGER_THRESHOLD) {
-                        activity?.runOnUiThread { updateUI(0, confidence, playAlert = false) }
-                    }
-                }
-                2 -> { // Yawning detected
-                    consecutiveWarnFrames++
-                    consecutiveDangerFrames = 0
-
-                    // Trigger Warning EXACTLY ONCE when Threshold is crossed.
-                    if (consecutiveWarnFrames == WARN_THRESHOLD) {
-                        activity?.runOnUiThread { updateUI(2, confidence, playAlert = true) }
-                    } else if (consecutiveWarnFrames > WARN_THRESHOLD) {
-                        activity?.runOnUiThread { updateUI(2, confidence, playAlert = false) }
-                    }
-                }
-                else -> { // Normal detected
-                    consecutiveDangerFrames = 0
-                    consecutiveWarnFrames = 0
-                    activity?.runOnUiThread { updateUI(1, confidence, playAlert = false) }
-                }
+            val flatList = mutableListOf<Float>()
+            for (frame in frameSequence) {
+                flatList.add(frame[0]) 
+                flatList.add(frame[1]) 
             }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "Inference error: ${e.message}")
-        }
+            for (i in 0 until expectedInputFloats) {
+                if (i < flatList.size) inputBuffer.putFloat(flatList[i]) else inputBuffer.putFloat(0f) 
+            }
+            inputBuffer.rewind()
+            interpreter.run(inputBuffer, outputBuffer)
+            outputBuffer.rewind()
+
+            val scores = FloatArray(expectedOutputFloats)
+            outputBuffer.asFloatBuffer().get(scores)
+
+            val rawClassIdx = scores.indices.maxByOrNull { scores[it] } ?: 0
+            val confidence = (scores[rawClassIdx] * 100).toInt().coerceIn(0, 100)
+
+            var finalClassIdx = rawClassIdx
+            if (finalClassIdx == 2 && currentMar < 0.35f) finalClassIdx = 0 
+            if (currentEar < 0.15f) finalClassIdx = 1 
+
+            if (predictionHistory.size == 5) predictionHistory.removeFirst()
+            predictionHistory.addLast(finalClassIdx)
+            val smoothedClassIdx = predictionHistory.groupBy { it }.maxByOrNull { it.value.size }?.key ?: finalClassIdx
+
+            activity?.runOnUiThread { updateUI(smoothedClassIdx, confidence) }
+        } catch (e: Exception) { Log.e(TAG, "LSTM Inference failed: ${e.message}") }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // UI & ANTI-SPAM SAFETY SCORE
-    // ══════════════════════════════════════════════════════════════════════
+    private fun distance(p1: NormalizedLandmark, p2: NormalizedLandmark): Float {
+        val dx = p1.x() - p2.x()
+        val dy = p1.y() - p2.y()
+        return sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+    }
 
-    private fun updateUI(labelIndex: Int, confidence: Int, playAlert: Boolean) {
+    private fun calculateEAR(eye: List<NormalizedLandmark>): Float {
+        val distA = distance(eye[1], eye[5])
+        val distB = distance(eye[2], eye[4])
+        val distC = distance(eye[0], eye[3])
+        return if (distC == 0f) 0f else (distA + distB) / (2.0f * distC)
+    }
+
+    private fun calculateMAR(lips: List<NormalizedLandmark>): Float {
+        val distA = distance(lips[2], lips[3]) 
+        val distC = distance(lips[0], lips[1]) 
+        return if (distC == 0f) 0f else distA / distC
+    }
+
+    private fun updateUI(labelIndex: Int, confidence: Int) {
         if (!isMonitoring) return
-
-        tvDetectionLabel.text = LABELS[labelIndex]
+        tvDetectionLabel.text = classLabels[labelIndex]
         tvConfidence.text = "$confidence%"
 
         when (labelIndex) {
-            0 -> { // EYES CLOSED
-                tvDetectionIcon.text = "😴"
-                tvDetectionLabel.setTextColor(Color.parseColor("#EF5350"))
-                tvConfidence.setTextColor(Color.parseColor("#EF5350"))
-                tvEyeState.text = "Closed"
-                tvEyeState.setTextColor(Color.parseColor("#EF5350"))
-                tvDrowsiness.text = "Drowsy"
-                tvDrowsiness.setTextColor(Color.parseColor("#EF5350"))
-                setStatus("● DANGER", "#EF5350")
-
-                safetyScore = maxOf(0f, safetyScore - 1.5f)
-                if (playAlert) triggerAlert(urgent = true)
-            }
-            1 -> { // NORMAL
+            0 -> { 
                 tvDetectionIcon.text = "👁"
-                tvDetectionLabel.setTextColor(Color.parseColor("#6ABF69"))
-                tvConfidence.setTextColor(Color.parseColor("#6ABF69"))
-                tvEyeState.text = "Open"
-                tvEyeState.setTextColor(Color.parseColor("#6ABF69"))
+                tvDetectionLabel.setTextColor("#6ABF69".toColorInt())
+                tvConfidence.setTextColor("#6ABF69".toColorInt())
                 tvDrowsiness.text = "None"
-                tvDrowsiness.setTextColor(Color.parseColor("#6ABF69"))
+                tvDrowsiness.setTextColor("#6ABF69".toColorInt())
                 setStatus("● SAFE", "#6ABF69")
-
-                safetyScore = minOf(100f, safetyScore + 1.0f)
+                safetyScore = minOf(100f, safetyScore + 1.0f) 
             }
-            2 -> { // YAWNING
+            1 -> { 
+                tvDetectionIcon.text = "😴"
+                tvDetectionLabel.setTextColor("#EF5350".toColorInt())
+                tvConfidence.setTextColor("#EF5350".toColorInt())
+                tvDrowsiness.text = "Drowsy" 
+                tvDrowsiness.setTextColor("#EF5350".toColorInt())
+                setStatus("● DANGER", "#EF5350")
+                safetyScore = maxOf(0f, safetyScore - 1.5f) 
+            }
+            2 -> { 
                 tvDetectionIcon.text = "🥱"
-                tvDetectionLabel.setTextColor(Color.parseColor("#FFB74D"))
-                tvConfidence.setTextColor(Color.parseColor("#FFB74D"))
-                tvEyeState.text = "Open"
-                tvEyeState.setTextColor(Color.parseColor("#6ABF69"))
-                tvDrowsiness.text = "Yawning"
-                tvDrowsiness.setTextColor(Color.parseColor("#FFB74D"))
+                tvDetectionLabel.setTextColor("#FFB74D".toColorInt())
+                tvConfidence.setTextColor("#FFB74D".toColorInt())
+                tvDrowsiness.text = "Yawning" 
+                tvDrowsiness.setTextColor("#FFB74D".toColorInt())
                 setStatus("● WARNING", "#FFB74D")
-
                 safetyScore = maxOf(0f, safetyScore - 0.5f)
-                if (playAlert) triggerAlert(urgent = false)
             }
         }
-
         updateSafetyUI()
     }
 
     private fun updateSafetyUI() {
+        safetyScore = safetyScore.coerceIn(0f, 100f)
         val scoreInt = safetyScore.toInt()
         tvSafetyScore.text = "$scoreInt%"
         pbSafetyScore.progress = scoreInt
-
+        
         val color = when {
             safetyScore > 75 -> "#6ABF69"
-            safetyScore > 50 -> "#FFB74D"
+            safetyScore > 45 -> "#FFB74D"
             else             -> "#EF5350"
         }
-        pbSafetyScore.progressTintList = ColorStateList.valueOf(Color.parseColor(color))
-    }
+        pbSafetyScore.progressTintList = ColorStateList.valueOf(color.toColorInt())
 
-    // 🚀 ALARM SPAM FIX: The alarm now only triggers precisely when a new mistake occurs.
-    private fun triggerAlert(urgent: Boolean) {
-        alertCount++
-        tvAlertCount.text = alertCount.toString()
-
-        try {
-            if (currentRingtone == null || !currentRingtone!!.isPlaying) {
-                val type = if (urgent) RingtoneManager.TYPE_ALARM else RingtoneManager.TYPE_NOTIFICATION
-                val alertUri = RingtoneManager.getDefaultUri(type)
-                currentRingtone = RingtoneManager.getRingtone(requireContext(), alertUri)
-                currentRingtone?.play()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Alert error: ${e.message}")
+        if (safetyScore <= 45f) {
+            if (isManuallyMuted) {
+                if (System.currentTimeMillis() - muteTimestamp > 10000) { 
+                    isManuallyMuted = false 
+                    playAudioAlarm()
+                }
+            } else { playAudioAlarm() }
+        } else if (safetyScore > 55f) {
+            isManuallyMuted = false 
+            stopAudioAlarm()
         }
     }
 
     private fun setStatus(text: String, hexColor: String) {
-        val color = Color.parseColor(hexColor)
+        val color = hexColor.toColorInt()
         tvStatusOverlay.text = text
         tvStatusOverlay.setTextColor(color)
         statusOverlay.strokeColor = color
     }
 
-    // ══════════════════════════════════════════════════════════════════════
-    // HELPERS
-    // ══════════════════════════════════════════════════════════════════════
-
-    private fun loadTFLiteModel() {
+    private fun loadAIModels() {
         try {
-            val fd = requireContext().assets.openFd(MODEL_FILE)
-            val modelBuffer: MappedByteBuffer = FileInputStream(fd.fileDescriptor).channel.map(
-                FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength
-            )
+            val fd = requireContext().assets.openFd(lstmModelFile)
+            val modelBuffer = FileInputStream(fd.fileDescriptor).channel.map(FileChannel.MapMode.READ_ONLY, fd.startOffset, fd.declaredLength)
             tfliteInterpreter = Interpreter(modelBuffer)
-        } catch (e: Exception) {
-            Log.e(TAG, "Model load failed: ${e.message}")
-        }
+        } catch (e: Exception) { Log.e(TAG, "LSTM load failed: ${e.message}") }
+
+        try {
+            val baseOptions = BaseOptions.builder().setModelAssetPath("face_landmarker.task").build()
+            val options = FaceLandmarker.FaceLandmarkerOptions.builder()
+                .setBaseOptions(baseOptions)
+                .setRunningMode(RunningMode.IMAGE)
+                .setNumFaces(1)
+                .build()
+            faceLandmarker = FaceLandmarker.createFromOptions(requireContext(), options)
+        } catch (e: Exception) { Log.e(TAG, "MediaPipe load failed: ${e.message}") }
     }
 
     private fun bindViews(view: View) {
         cameraPreview    = view.findViewById(R.id.cameraPreview)
         tvTimer          = view.findViewById(R.id.tvTimer)
         tvFPS            = view.findViewById(R.id.tvFPS)
+        tvLiveEar        = view.findViewById(R.id.tvLiveEar)
+        tvLiveMar        = view.findViewById(R.id.tvLiveMar)
         tvStatusOverlay  = view.findViewById(R.id.tvStatusOverlay)
         tvDetectionIcon  = view.findViewById(R.id.tvDetectionIcon)
         tvDetectionLabel = view.findViewById(R.id.tvDetectionLabel)
@@ -519,6 +664,7 @@ class MonitorFragment : Fragment() {
         tvDrowsiness     = view.findViewById(R.id.tvDrowsiness)
         tvAlertCount     = view.findViewById(R.id.tvAlertCount)
         btnStopMonitor   = view.findViewById(R.id.btnStopMonitor)
+        btnMuteAlarm     = view.findViewById(R.id.btnMuteAlarm) 
         statusOverlay    = view.findViewById(R.id.statusOverlay)
         liveBadgeCard    = view.findViewById(R.id.liveBadge)
         tvLiveText       = view.findViewById(R.id.tvLiveText)
@@ -527,13 +673,9 @@ class MonitorFragment : Fragment() {
     }
 
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-    private fun requestCameraPermission() = ActivityCompat.requestPermissions(requireActivity(), arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
+    private fun requestCameraPermission() = requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == CAMERA_PERMISSION_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startCamera()
-        } else {
-            Toast.makeText(requireContext(), "Camera permission required", Toast.LENGTH_SHORT).show()
-        }
+        if (requestCode == CAMERA_PERMISSION_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) startCamera()
     }
 }

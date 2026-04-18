@@ -25,9 +25,9 @@
         <item name="colorError">@color/status_danger</item>
         <item name="colorOnError">@color/text_primary</item>
 
-        <!-- Status bar — dark -->
+        <!-- Status bar -->
         <item name="android:statusBarColor">@color/bg_deepest</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
 
         <!-- Navigation bar — dark, no translucency -->
         <item name="android:navigationBarColor">@color/bg_deepest</item>

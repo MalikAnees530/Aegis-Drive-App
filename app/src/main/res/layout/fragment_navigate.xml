@@ -6,56 +6,30 @@
     android:layout_height="match_parent"
     android:background="@color/bg_deepest">
 
-    <!-- TOP BAR -->
-    <TextView
-        android:id="@+id/tvNavTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="24dp"
-        android:text="Navigation"
-        android:textColor="@color/text_primary"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:letterSpacing="-0.02"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/btnAddPlace"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="24dp"
-        app:cardBackgroundColor="@color/bg_surface"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/border_subtle"
-        app:strokeWidth="1dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center"
-            android:text="⊕"
-            android:textColor="@color/accent_primary"
-            android:textSize="16sp" />
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- SEARCH BAR -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/searchBarCard"
+    <!-- 1. MAP LAYER -->
+    <org.osmdroid.views.MapView
+        android:id="@+id/map"
         android:layout_width="0dp"
-        android:layout_height="50dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 2. SEARCH BENTO (Fixed Top) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardSearch"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
         android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="16dp"
-        app:cardBackgroundColor="@color/bg_surface"
-        app:cardCornerRadius="14dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/border_visible"
+        android:layout_marginTop="48dp"
+        app:cardBackgroundColor="#F2121212"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="12dp"
+        app:strokeColor="#4DFFFFFF"
         app:strokeWidth="1dp"
-        app:layout_constraintTop_toBottomOf="@id/tvNavTitle"
+        android:elevation="12dp"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
         <LinearLayout
@@ -63,279 +37,301 @@
             android:layout_height="match_parent"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="14dp">
+            android:paddingHorizontal="16dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⌕"
-                android:textColor="@color/accent_primary"
+                android:text="🔍"
                 android:textSize="18sp"
-                android:layout_marginEnd="10dp" />
-            <TextView
+                android:layout_marginEnd="12dp" />
+            <AutoCompleteTextView
+                android:id="@+id/etSearch"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Search any destination..."
-                android:textColor="@color/text_disabled"
-                android:textSize="13sp" />
+                android:background="@android:color/transparent"
+                android:hint="Search Areas (e.g. G9, F10, KFC)..."
+                android:textColor="#FFFFFF"
+                android:textColorHint="#6D8196"
+                android:textSize="14sp"
+                android:completionThreshold="1"
+                android:imeOptions="actionSearch"
+                android:inputType="text" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- MAP CARD -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/mapCard"
-        android:layout_width="0dp"
-        android:layout_height="200dp"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="12dp"
-        app:cardBackgroundColor="@color/bg_elevated"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/border_subtle"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toBottomOf="@id/searchBarCard"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
-            <!-- Map placeholder with grid pattern -->
-            <View
-                android:id="@+id/mapView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@color/bg_elevated" />
-
-            <!-- Location pin center -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/locationPin"
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                app:cardBackgroundColor="@color/accent_primary"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/accent_light"
-                app:strokeWidth="2dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent" />
-
-            <!-- GPS Badge -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/gpsBadge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                app:cardBackgroundColor="#CC111113"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="0dp"
-                app:strokeColor="#336ABF69"
-                app:strokeWidth="1dp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="GPS ●"
-                    android:textColor="@color/status_safe"
-                    android:textSize="9sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.05"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Location label -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/locationLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                app:cardBackgroundColor="#CC111113"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/border_subtle"
-                app:strokeWidth="1dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📍 Rawalpindi, PK"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
-                    android:paddingHorizontal="8dp"
-                    android:paddingVertical="4dp" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Recenter button -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/recenterBtn"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_margin="10dp"
-                app:cardBackgroundColor="@color/accent_primary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="0dp"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:text="⊙"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
-            </com.google.android.material.card.MaterialCardView>
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- SAVED PLACES HEADER -->
-    <TextView
-        android:id="@+id/tvSavedPlaces"
+    <!-- 3. NAVIGATION ACTION BUTTONS -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStartDrive"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="20dp"
-        android:text="Saved Places"
-        android:textColor="@color/text_primary"
+        android:layout_height="60dp"
+        android:text="↱ START DRIVE"
+        android:textColor="#0F172A"
         android:textSize="14sp"
         android:textStyle="bold"
+        android:visibility="gone"
+        android:elevation="20dp"
+        app:backgroundTint="#38BDF8"
+        app:cornerRadius="30dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomCommandBento"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/mapCard" />
-
-    <TextView
-        android:id="@+id/tvAddNew"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="20dp"
-        android:text="Add new +"
-        android:textColor="@color/accent_primary"
-        android:textSize="11sp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/mapCard" />
+        android:layout_marginBottom="16dp" />
 
-    <!-- PLACES LIST -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnStopDrive"
+        android:layout_width="wrap_content"
+        android:layout_height="60dp"
+        android:text="✕ CANCEL TRIP"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        android:elevation="20dp"
+        app:backgroundTint="#EF5350"
+        app:cornerRadius="30dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomCommandBento"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 4. TELEMETRY ROW (Speed + Safety Status) -->
     <LinearLayout
-        android:id="@+id/placesList"
-        android:layout_width="0dp"
+        android:id="@+id/telemetryRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:layout_marginTop="12dp"
+        android:elevation="12dp"
+        app:layout_constraintTop_toBottomOf="@id/cardSearch">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            app:cardBackgroundColor="#E6FFFFFF"
+            app:cardCornerRadius="18dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="#DDDDDD">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tvSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#000000"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="km/h" android:textColor="#666666" android:textSize="8sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatusIndicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardBackgroundColor="#CC121212"
+            app:cardCornerRadius="18dp"
+            app:strokeColor="#33FFFFFF"
+            app:strokeWidth="1dp">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp"
+                android:gravity="center_vertical">
+                <View
+                    android:id="@+id/statusDot"
+                    android:layout_width="10dp"
+                    android:layout_height="10dp"
+                    android:background="@drawable/ic_launcher_background"
+                    android:backgroundTint="@color/status_safe"
+                    android:layout_marginEnd="6dp" />
+                <TextView
+                    android:id="@+id/tvStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="AI SAFE"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- 5. 2-SECOND GLANCE CARD -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardRouting"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
         android:layout_marginTop="12dp"
-        android:orientation="vertical"
-        app:layout_constraintTop_toBottomOf="@id/tvSavedPlaces"
+        app:cardBackgroundColor="#F2121212"
+        app:cardCornerRadius="24dp"
+        app:strokeColor="#4DFFFFFF"
+        app:strokeWidth="1dp"
+        android:visibility="gone"
+        android:elevation="12dp"
+        app:layout_constraintTop_toBottomOf="@id/telemetryRow">
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="↱"
+                android:textColor="@color/accent_light"
+                android:textSize="28sp"
+                android:layout_marginEnd="12dp"
+                android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tvNavDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvNavStreet"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Awaiting Route"
+                    android:textColor="#A0A0A0"
+                    android:textSize="12sp" />
+            </LinearLayout>
+            <TextView
+                android:id="@+id/tvRemainingTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- min"
+                android:textColor="@color/accent_light"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- GPS CENTER BUTTON -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/btnCenterLocation"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
+        app:cardBackgroundColor="#E6FFFFFF"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:strokeColor="#DDDDDD"
+        app:strokeWidth="1dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomCommandBento"
+        app:layout_constraintEnd_toEndOf="parent">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="🎯"
+            android:textSize="20sp" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 6. BOTTOM COMMAND BENTO -->
+    <LinearLayout
+        android:id="@+id/bottomCommandBento"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="40dp"
+        android:elevation="15dp"
+        android:gravity="bottom"
+        android:weightSum="5"
+        app:layout_constraintBottom_toBottomOf="parent">
+        
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnSafeHarbor"
+            android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="4dp"
+            app:cardBackgroundColor="@color/bg_surface" app:cardCornerRadius="16dp" app:strokeColor="@color/border_subtle" app:strokeWidth="1dp"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="🏨" android:textSize="22sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnFood"
+            android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginHorizontal="4dp"
+            app:cardBackgroundColor="@color/bg_surface" app:cardCornerRadius="16dp" app:strokeColor="@color/border_subtle" app:strokeWidth="1dp"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="🍔" android:textSize="22sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/btnGas"
+            android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginHorizontal="4dp"
+            app:cardBackgroundColor="@color/bg_surface" app:cardCornerRadius="16dp" app:strokeColor="@color/border_subtle" app:strokeWidth="1dp"
+            android:clickable="true" android:focusable="true">
+            <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="⛽" android:textSize="22sp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardVoiceSearch"
+            android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="2" android:layout_marginStart="4dp"
+            app:cardBackgroundColor="@color/bg_surface" app:cardCornerRadius="32dp" app:strokeColor="@color/border_subtle" app:strokeWidth="1dp"
+            android:clickable="true" android:focusable="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎤 VOICE" android:textStyle="bold" android:textColor="@color/accent_primary" android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
+
+    <!-- INTERNAL VOICE OVERLAY -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/voiceOverlay"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:visibility="gone"
+        android:elevation="100dp"
+        app:cardBackgroundColor="#E6121212"
+        app:cardCornerRadius="100dp"
+        app:strokeColor="@color/accent_primary"
+        app:strokeWidth="3dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- Place 1: Home -->
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp">
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardBackgroundColor="@color/bg_elevated"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/border_subtle"
-                    app:strokeWidth="1dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="🏠" android:textSize="16sp"/>
-                </com.google.android.material.card.MaterialCardView>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Home" android:textColor="@color/text_primary" android:textSize="13sp" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bahria Town, Rawalpindi" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
-                </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12 km" android:textColor="@color/accent_primary" android:textSize="11sp" android:textStyle="bold"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Place 2: Office -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
+                android:text="🎤"
+                android:textSize="48sp" />
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp">
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardBackgroundColor="@color/bg_elevated"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/border_subtle"
-                    app:strokeWidth="1dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="💼" android:textSize="16sp"/>
-                </com.google.android.material.card.MaterialCardView>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Office" android:textColor="@color/text_primary" android:textSize="13sp" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Blue Area, Islamabad" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
-                </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="8 km" android:textColor="@color/accent_primary" android:textSize="11sp" android:textStyle="bold"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Place 3: Fuel -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:padding="12dp">
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardBackgroundColor="@color/bg_elevated"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/border_subtle"
-                    app:strokeWidth="1dp">
-                    <TextView android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:text="⛽" android:textSize="16sp"/>
-                </com.google.android.material.card.MaterialCardView>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Nearest Fuel" android:textColor="@color/text_primary" android:textSize="13sp" android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PSO Pump, GT Road" android:textColor="@color/text_disabled" android:textSize="10sp" android:layout_marginTop="2dp"/>
-                </LinearLayout>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.2 km" android:textColor="@color/status_safe" android:textSize="11sp" android:textStyle="bold"/>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-    </LinearLayout>
+                android:text="LISTENING..."
+                android:textColor="@color/accent_primary"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:layout_marginTop="8dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================ -->
+    <!-- AEGISDRIVE - INK WASH PREMIUM DARK PALETTE   -->
+    <!-- ============================================ -->
+
+    <!-- === BACKGROUND COLORS === -->
+    <color name="bg_deepest">#121212</color>
+    <color name="bg_surface">#1E1E1E</color>
+    <color name="bg_elevated">#2C2C2C</color>
+    <color name="charcoal">#4A4A4A</color>
+
+    <!-- === TEXT COLORS === -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#CBCBCB</color>
+    <color name="text_disabled">#A0A0A0</color>
+
+    <!-- === ACCENT / ACTION COLORS === -->
+    <color name="accent_primary">#6D8196</color>
+    <color name="accent_light">#8FA3B5</color>
+    <color name="accent_dark">#4E6070</color>
+
+    <!-- === STATUS / SEMANTIC COLORS === -->
+    <color name="status_safe">#6ABF69</color>
+    <color name="status_warning">#FFB74D</color>
+    <color name="status_danger">#EF5350</color>
+
+    <!-- === BORDER / DIVIDER COLORS === -->
+    <color name="border_subtle">#333333</color>
+    <color name="border_visible">#555555</color>
+
+    <!-- === BOTTOM NAVIGATION === -->
+    <color name="nav_background">#121212</color>
+    <color name="nav_icon_active">#FFFFE3</color>
+    <color name="nav_icon_inactive">#6E6E6E</color>
+
+    <!-- === SYSTEM / MATERIAL REQUIRED COLORS === -->
+    <color name="colorPrimary">#6D8196</color>
+    <color name="colorPrimaryVariant">#4E6070</color>
+    <color name="colorOnPrimary">#FFFFE3</color>
+
+    <color name="colorSecondary">#CBCBCB</color>
+    <color name="colorSecondaryVariant">#9E9E9E</color>
+    <color name="colorOnSecondary">#1A1A1A</color>
+
+    <color name="colorBackground">#121212</color>
+    <color name="colorOnBackground">#FFFFE3</color>
+
+    <color name="colorSurface">#1E1E1E</color>
+    <color name="colorOnSurface">#FFFFE3</color>
+
+    <color name="colorError">#EF5350</color>
+    <color name="colorOnError">#FFFFE3</color>
+</resources>

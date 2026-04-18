@@ -53,6 +53,10 @@ dependencies {
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
 
+    // 🚀 NEW: Osmdroid (100% Free Offline Maps - No API Key Needed)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation(libs.play.services.location)
+
     // CameraX Tools
     val cameraxVersion = "1.3.4"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -64,12 +68,16 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
 
+    // 🚀 NEW: MediaPipe Tools (Required for Hybrid LSTM Pipeline)
+    implementation("com.google.mediapipe:tasks-vision:0.10.14")
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
     // Navigation Component Tools
     implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
     implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
     implementation("com.google.android.material:material:1.11.0")
-
 }

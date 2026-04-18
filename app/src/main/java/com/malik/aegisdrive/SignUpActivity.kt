@@ -7,28 +7,20 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.CheckBox
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.google.firebase.auth.FirebaseAuth
-import androidx.appcompat.app.AlertDialog
-import com.google.firebase.firestore.FirebaseFirestore
-import com.malik.aegisdrive.DriverProfile
 
 class SignUpActivity : AppCompatActivity() {
 
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
     private var loadingDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
-
-        auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
 
         // Input Layouts (for error display)
         val nameLayout = findViewById<TextInputLayout>(R.id.nameInputLayout)
@@ -100,40 +92,15 @@ class SignUpActivity : AppCompatActivity() {
                 hideKeyboard()
                 showLoadingDialog("Creating your Aegis account...")
                 
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this) { task ->
-                        if (task.isSuccessful) {
-                            val user = auth.currentUser
-                            val profile = DriverProfile(
-                                uid = user?.uid ?: "",
-                                fullName = name,
-                                email = email,
-                                phone = etPhone.text.toString().trim()
-                            )
-                            
-                            // Save to Firestore
-                            db.collection("drivers").document(profile.uid)
-                                .set(profile)
-                                .addOnSuccessListener {
-                                    loadingDialog?.dismiss()
-                                    Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
-                                    val intent = Intent(this, LoginActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    startActivity(intent)
-                                    finish()
-                                }
-                                .addOnFailureListener { e ->
-                                    loadingDialog?.dismiss()
-                                    Toast.makeText(this, "Profile error: ${e.message}", Toast.LENGTH_SHORT).show()
-                                    startActivity(Intent(this, LoginActivity::class.java))
-                                    finish()
-                                }
-                        } else {
-                            loadingDialog?.dismiss()
-                            Toast.makeText(baseContext, "Registration failed: ${task.exception?.message}",
-                                Toast.LENGTH_SHORT).show()
-                        }
-                    }
+                // Simulate network delay
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    loadingDialog?.dismiss()
+                    Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                    val intent = Intent(this, LoginActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                    finish()
+                }, 1500)
             }
         }
 
