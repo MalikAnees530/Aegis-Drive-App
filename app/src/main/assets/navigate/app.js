@@ -1,311 +1,304 @@
-// Aegis Drive - Final "Golden Master" Navigation Logic
-
+// Aegis Drive - Golden Master Premium Engine (Lead UI/UX DESIGNER EDITION)
 const map = new maplibregl.Map({
     container: 'map',
     style: 'https://tiles.openfreemap.org/styles/liberty',
     center: [73.0479, 33.6844], 
-    zoom: 14, pitch: 45, antialias: true, attributionControl: false
+    zoom: 14, pitch: 45, antialias: true, attributionControl: false,
+    doubleClickZoom: false 
 });
 
-map.on('style.load', () => {
-    const layers = map.getStyle().layers;
-    layers.forEach(layer => {
-        if (layer.type === 'symbol') {
-            map.setLayoutProperty(layer.id, 'visibility', 'visible');
-            map.setLayoutProperty(layer.id, 'text-field', ['get', 'name:en']);
-        }
-    });
-});
-
+// 🚀 ENGINE STATE
 let userMarker = null;
 let currentPos = [73.0479, 33.6844];
 let isNavigating = false;
+let isCameraFollow = true;
 let isEditMode = false;
 let targetPos = null;
+let lastRouteData = null;
+let lastUserSnapPoint = null;
 let poiMarkers = [];
 
-const arrowEl = document.createElement('div');
-arrowEl.style.width = '24px'; arrowEl.style.height = '24px';
-arrowEl.style.background = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338BDF8"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>\')';
-arrowEl.style.backgroundSize = 'contain';
+// 🗝️ API CONFIG
+const TOMTOM_KEY = "YOUR_TOMTOM_API_KEY"; 
+
+// 🚀 NAVIGATION BEAM
+const beamEl = document.createElement('div');
+beamEl.className = 'nav-beam';
+beamEl.innerHTML = '<div class="nav-arrow"></div>';
 
 map.on('load', () => {
-    userMarker = new maplibregl.Marker({ element: arrowEl, rotationAlignment: 'map' }).setLngLat(currentPos).addTo(map);
+    userMarker = new maplibregl.Marker({ element: beamEl, rotationAlignment: 'map' }).setLngLat(currentPos).addTo(map);
     map.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] } } });
-    map.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#38BDF8', 'line-width': 10, 'line-opacity': 0.85 } });
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-left');
+    map.addLayer({ id: 'route', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#38BDF8', 'line-width': 8, 'line-opacity': 0.9 } });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 });
 
-// 🚀 DOUBLE-CLICK TO SELECT DESTINATION (GITHUB LOGIC)
-map.on('dblclick', (e) => {
-    if (isEditMode) return; // Don't conflict with Home editing
-    const pos = [e.lngLat.lng, e.lngLat.lat];
-    handleDestinationSelected(pos, "Selected Location");
-});
+// 🛰️ CAMERA SYNC & RECENTER
+map.on('dragstart', () => { if (isNavigating) isCameraFollow = false; });
+const recenterMap = () => { isCameraFollow = true; map.flyTo({ center: currentPos, zoom: 19, pitch: 65, bearing: userMarker ? userMarker.getRotation() : 0, duration: 1000 }); };
+document.getElementById('btnRecenter').onclick = recenterMap;
+document.getElementById('btnRecenterNav').onclick = recenterMap;
 
 // ---------------------------------------------------------
-// 🏠 HOME & EDIT MODE LOGIC
+// 🏠 HOME ACTIONS
 // ---------------------------------------------------------
 
 const btnHome = document.getElementById('btnHome');
 const homeMenu = document.getElementById('homeMenu');
-const editOverlay = document.getElementById('editOverlay');
 
-btnHome.onclick = (e) => {
-    e.stopPropagation();
-    if (isNavigating) return;
-    homeMenu.classList.toggle('hidden');
-};
-
+btnHome.onclick = (e) => { e.stopPropagation(); homeMenu.classList.toggle('hidden'); };
 document.addEventListener('click', () => homeMenu.classList.add('hidden'));
 
-document.getElementById('menuEditHome').onclick = () => {
-    isEditMode = true;
-    editOverlay.classList.remove('hidden');
-    showCustomToast("📍 Click anywhere on the map to set Home");
-};
+document.getElementById('menuEditHome').onclick = () => { isEditMode = true; document.getElementById('editOverlay').classList.remove('hidden'); homeMenu.classList.add('hidden'); };
+document.getElementById('menuNavigateHome').onclick = () => { if (window.Android) window.Android.triggerNavigateHome(); homeMenu.classList.add('hidden'); };
+document.getElementById('btnCancelEdit').onclick = () => { isEditMode = false; document.getElementById('editOverlay').classList.add('hidden'); };
 
-document.getElementById('menuNavigateHome').onclick = () => {
-    if (window.Android) window.Android.triggerNavigateHome();
-};
-
-document.getElementById('btnCancelEdit').onclick = () => {
-    isEditMode = false;
-    editOverlay.classList.add('hidden');
-};
-
-map.on('click', async (e) => {
+map.on('click', (e) => {
     if (!isEditMode) return;
     isEditMode = false;
-    editOverlay.classList.add('hidden');
-    
+    document.getElementById('editOverlay').classList.add('hidden');
     if (window.Android) {
         window.Android.saveHomeLocation(e.lngLat.lat, e.lngLat.lng);
         showCustomToast("🏠 Home Location Saved Successfully");
-        clearPOIs();
-        const homeLabel = document.createElement('div');
-        homeLabel.className = 'marker-bubble';
-        homeLabel.style.borderColor = '#10B981';
-        homeLabel.innerText = "🏠 My Home";
-        const m = new maplibregl.Marker({ element: homeLabel }).setLngLat(e.lngLat).addTo(map);
-        poiMarkers.push(m);
-        
-        // Logic fix: Immediately prepare navigation for the NEW home
         handleDestinationSelected([e.lngLat.lng, e.lngLat.lat], "Home");
     }
 });
 
 // ---------------------------------------------------------
-// PRECISION SEARCH & INTERACTION
+// 🔍 PRECISION SEARCH ENGINE (PAKISTAN WIDE + SECTOR FIX)
 // ---------------------------------------------------------
 
 const etSearch = document.getElementById('etSearch');
 const suggestionsList = document.getElementById('suggestions');
 
 function optimizeQuery(raw) {
-    let q = raw.toLowerCase()
-        .replace(/\bfast university\b/g, "fast university h11 islamabad")
-        .replace(/\bpgc\b/g, "punjab group of colleges blue area")
-        .replace(/\bnuml\b/g, "national university of modern languages h9 islamabad")
-        .replace(/\baps\b/g, "army public school islamabad");
+    let q = raw.toLowerCase().trim();
+    
+    // 🚀 VOICE CORRECTION LAYER (Common misrecognitions)
+    q = q.replace(/\bnarayn bhagwan\b/g, "naran kaghan")
+         .replace(/\bnaran khaghan\b/g, "naran kaghan")
+         .replace(/\bmurre road\b/g, "murree road rawalpindi");
 
-    // 🚀 FIXED: Aggressive Islamabad Sector Normalization for Voice/Keyboard
-    // 1. First, collapse spaces/dashes (e.g., "g 9 2" -> "g92")
-    q = q.replace(/\b([a-i])[\s\/-]+(\d)\s*(\d?)\b/g, "$1$2$3");
-
-    // 2. Intelligent splitting and formatting (e.g., "g92" -> "G-9/2 Islamabad")
-    q = q.replace(/\b([a-i])(\d{1,3})\b/g, (match, letter, digits) => {
-        let sector = "";
-        let subsector = "";
+    // 🚀 PRECISION FIX: Islamabad Sector Normalization (Handles G11, F10, G13, G9/2, etc.)
+    // Optimized regex to capture 1-2 digit sectors and optional subsectors
+    const sectorRegex = /\b([a-i])[\s\/\-]*(\d{1,2})[\s\/\-]*([1-4])?\b/i;
+    let match = q.match(sectorRegex);
+    
+    if (match) {
+        let letter = match[1].toUpperCase();
+        let sectorNum = match[2];
+        let subSector = match[3] || "";
         
-        if (digits.length === 1) {
-            sector = digits;
-        } else if (digits.length === 2) {
-            // Islamabad rule: sectors 5-9 have subsectors (e.g., 92 is 9/2)
-            if (digits[0] >= '5' && digits[0] <= '9') {
-                sector = digits[0];
-                subsector = digits[1];
-            } else {
-                sector = digits;
-            }
-        } else if (digits.length === 3) {
-            sector = digits.substring(0, 2);
-            subsector = digits[2];
+        // Logical filter: Islamabad sectors only go up to 17
+        if (parseInt(sectorNum) <= 18) {
+            let formatted = `${letter}-${sectorNum}${subSector ? '/' + subSector : ''} Islamabad`;
+            q = q.replace(match[0], formatted);
         }
-
-        let res = `${letter.toUpperCase()}-${sector}`;
-        if (subsector) res += `/${subsector}`;
-        return res + " Islamabad"; 
-    });
-
+    }
+    
+    // Global Pakistan Bias
+    if (!q.includes("pakistan") && !q.includes("islamabad") && !q.includes("lahore") && !q.includes("karachi") && !q.includes("rawalpindi")) {
+        q += " Pakistan";
+    }
     return q;
 }
 
-etSearch.oninput = debounce(async (e) => {
-    fetchSuggestions(e.target.value);
-}, 300);
-
-async function fetchSuggestions(query) {
-    if (query.length < 1) { suggestionsList.classList.add('hidden'); return; }
+async function performSearch(query) {
+    if (!query) return;
     const q = optimizeQuery(query);
     try {
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=20`;
+        let url;
+        const encodedQ = encodeURIComponent(q);
+        if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
+            url = `https://api.tomtom.com/search/2/search/${encodedQ}.json?key=${TOMTOM_KEY}&countrySet=PK&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=1&radius=50000&typeahead=true&idxSet=Str,Geo,Addr`;
+        } else {
+            url = `https://photon.komoot.io/api/?q=${encodedQ}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=1`;
+        }
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.results && data.results.length > 0) {
+            const item = data.results[0];
+            handleDestinationSelected([item.position.lon, item.position.lat], item.poi ? item.poi.name : item.address.freeformAddress);
+        } else if (data.features && data.features.length > 0) {
+            const item = data.features[0];
+            handleDestinationSelected(item.geometry.coordinates, item.properties.name || q.split(' ')[0]);
+        } else { showCustomToast("❌ Location not found"); }
+    } catch (e) { showCustomToast("❌ Search failed"); }
+}
+
+etSearch.oninput = debounce(async (e) => {
+    const rawVal = e.target.value;
+    if (rawVal.length < 2) { suggestionsList.classList.add('hidden'); return; }
+    const q = optimizeQuery(rawVal);
+    try {
+        let url;
+        const encodedQ = encodeURIComponent(q);
+        if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
+            url = `https://api.tomtom.com/search/2/search/${encodedQ}.json?key=${TOMTOM_KEY}&countrySet=PK&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=10&radius=100000&typeahead=true&idxSet=Str,Geo,Addr`;
+        } else {
+            url = `https://photon.komoot.io/api/?q=${encodedQ}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=10`;
+        }
+
         const res = await fetch(url);
         const data = await res.json();
         suggestionsList.innerHTML = '';
-        if (data.features && data.features.length > 0) {
-            data.features.forEach(item => {
-                const props = item.properties;
-                const div = document.createElement('div');
-                div.className = 'suggestion-item';
-                const parts = [props.name, props.street, props.district, props.city].filter(Boolean);
-                const name = parts.join(", ");
-                div.innerText = name;
-                div.onclick = () => { 
-                    etSearch.value = name; 
-                    suggestionsList.classList.add('hidden'); 
-                    handleDestinationSelected(item.geometry.coordinates, name); 
-                };
-                suggestionsList.appendChild(div);
-            });
-            suggestionsList.classList.remove('hidden');
-        } else {
-            suggestionsList.classList.add('hidden');
-        }
-    } catch (e) {}
-}
+        
+        const items = data.results || (data.features ? data.features.map(f => ({ 
+            position: { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },
+            poi: { name: f.properties.name },
+            address: { freeformAddress: [f.properties.street, f.properties.district, f.properties.city].filter(Boolean).join(", ") }
+        })) : []);
 
-etSearch.addEventListener('keydown', (e) => { 
-    if (e.key === 'Enter') {
-        performSearch(etSearch.value);
-        suggestionsList.classList.add('hidden');
-        etSearch.blur();
-    }
-});
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            const name = item.poi ? item.poi.name : (item.address ? item.address.freeformAddress : "Location");
+            const addr = item.address ? item.address.freeformAddress : "";
+            div.innerHTML = `<div class="sugg-icon">📍</div><div class="sugg-text"><span class="sugg-name">${name}</span><span class="sugg-addr">${addr}</span></div>`;
+            div.onclick = () => { etSearch.value = name; suggestionsList.classList.add('hidden'); handleDestinationSelected([item.position.lon, item.position.lat], name); };
+            suggestionsList.appendChild(div);
+        });
+        if (items.length > 0) suggestionsList.classList.remove('hidden');
+        else suggestionsList.classList.add('hidden');
+    } catch (e) { suggestionsList.classList.add('hidden'); }
+}, 300);
 
-document.getElementById('btnSearchSubmit').onclick = () => {
-    performSearch(etSearch.value);
-    suggestionsList.classList.add('hidden');
-    etSearch.blur();
+// Input Interactions
+etSearch.onkeydown = (e) => { if (e.key === 'Enter') { performSearch(etSearch.value); suggestionsList.classList.add('hidden'); etSearch.blur(); } };
+etSearch.addEventListener('search', () => { performSearch(etSearch.value); suggestionsList.classList.add('hidden'); });
+document.getElementById('btnSearchSubmit').onclick = () => { performSearch(etSearch.value); suggestionsList.classList.add('hidden'); };
+document.getElementById('btnVoice').onclick = () => { if (window.Android) window.Android.startVoiceRecognition(); };
+
+window.onVoiceResult = (text) => { 
+    etSearch.value = text;
+    performSearch(text); 
+    // Format UI display based on logic
+    const optimized = optimizeQuery(text);
+    const uiText = optimized.replace(" Islamabad", "").replace(" Pakistan", "").toUpperCase();
+    etSearch.value = uiText;
 };
 
-async function performSearch(query) {
-    if (!query) return;
-    showCustomToast("🔍 Pinpointing...");
-    const q = optimizeQuery(query);
-    try {
-        // Switch to Photon for precise search - better handling of Islamabad sectors
-        const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=1`;
-        const res = await fetch(url);
-        const data = await res.json();
-        
-        if (data.features && data.features.length > 0) {
-            const item = data.features[0];
-            const props = item.properties;
-            const name = [props.name, props.district, props.city].filter(Boolean).join(", ");
-            handleDestinationSelected(item.geometry.coordinates, name);
-        } else {
-            showCustomToast("❌ Location not found");
-        }
-    } catch (e) { 
-        showCustomToast("❌ Search failed"); 
-    }
-}
+// ---------------------------------------------------------
+// 🗺️ ROUTING & CORE ENGINE
+// ---------------------------------------------------------
+
+map.on('dblclick', (e) => {
+    if (isEditMode) return;
+    const features = map.queryRenderedFeatures(e.point);
+    let name = features.length > 0 ? (features[0].properties.name || "Selected Location") : "Selected Location";
+    handleDestinationSelected([e.lngLat.lng, e.lngLat.lat], name);
+});
 
 function handleDestinationSelected(pos, name) {
     targetPos = pos;
-    poiMarkers.forEach(m => m.remove()); poiMarkers = [];
+    clearPOIs();
     const label = document.createElement('div');
     label.className = 'marker-bubble';
     label.innerText = `📍 ${name.split(',')[0]}`;
     const m = new maplibregl.Marker({ element: label }).setLngLat(pos).addTo(map);
     poiMarkers.push(m);
-    map.flyTo({ center: pos, zoom: 17, pitch: 0 });
     document.getElementById('navStreet').innerText = name.split(',')[0];
     document.getElementById('routingCard').classList.remove('hidden');
-    document.getElementById('btnStartDrive').classList.remove('hidden');
-    document.getElementById('btnCancelDrive').classList.remove('hidden'); // 🚀 FIXED: Always show STOP button when card is up
-    
-    // UI Fix: Show user it's calculating
-    document.getElementById('navTime').innerText = "Calculating...";
-    document.getElementById('navDistance').innerText = "-- km";
-    
+    map.flyTo({ center: pos, zoom: 16, pitch: 0, duration: 1500 });
     planRoute(currentPos, pos);
 }
 
-// ---------------------------------------------------------
-// ROUTING & HANDSHAKE
-// ---------------------------------------------------------
-
-window.updateLocation = function(lat, lng, speed, heading) {
-    currentPos = [lng, lat];
-    if (userMarker) {
-        userMarker.setLngLat(currentPos);
-        if (speed > 1.5) userMarker.setRotation(heading);
-    }
-    if (isNavigating) {
-        map.easeTo({ center: currentPos, zoom: 18.5, bearing: heading, duration: 1000 });
-        updateETADisplay();
-    }
-};
-
-window.onVoiceResult = (text) => { etSearch.value = text; performSearch(text); };
-
 async function planRoute(start, dest) {
     try {
-        const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${dest[0]},${dest[1]}?overview=full&geometries=geojson`;
+        const url = `https://router.project-osrm.org/route/v1/driving/${start[0]},${start[1]};${dest[0]},${dest[1]}?overview=full&geometries=geojson&steps=true&continue_straight=true`;
         const res = await fetch(url);
         const data = await res.json();
-        if (data.routes && data.routes.length > 0) {
-            map.getSource('route').setData(data.routes[0].geometry);
-            document.getElementById('navDistance').innerText = (data.routes[0].distance / 1000).toFixed(1) + ' km';
-            document.getElementById('navTime').innerText = Math.round(data.routes[0].duration / 60) + ' min';
+        if (data.code === 'Ok' && data.routes.length > 0) {
+            lastRouteData = data.routes[0];
+            map.getSource('route').setData(lastRouteData.geometry);
+            lastUserSnapPoint = lastRouteData.geometry.coordinates[0];
+            syncDottedLine();
+            updateETADisplay(lastRouteData);
+            if (!isNavigating) {
+                const bounds = lastRouteData.geometry.coordinates.reduce((acc, coord) => acc.extend(coord), new maplibregl.LngLatBounds(currentPos, currentPos));
+                map.fitBounds(bounds, { padding: 100, duration: 1500 });
+            }
         }
     } catch (e) {}
 }
 
-document.getElementById('btnStartDrive').onclick = () => {
-    isNavigating = true; 
-    document.getElementById('searchContainer').classList.add('hidden');
-    document.getElementById('btnStartDrive').classList.add('hidden');
-    document.getElementById('btnCancelDrive').classList.remove('hidden');
-    map.flyTo({ center: currentPos, zoom: 19, pitch: 65, bearing: userMarker.getRotation() });
+function syncDottedLine() {
+    if (!lastUserSnapPoint) return;
+    const geo = { type: 'Feature', geometry: { type: 'LineString', coordinates: [currentPos, lastUserSnapPoint] } };
+    if (!map.getSource('route-dotted')) {
+        map.addSource('route-dotted', { type: 'geojson', data: geo });
+        map.addLayer({ id: 'route-dotted', type: 'line', source: 'route-dotted', paint: { 'line-color': '#38BDF8', 'line-width': 5, 'line-dasharray': [1, 2] } });
+    } else { map.getSource('route-dotted').setData(geo); }
+}
+
+function updateETADisplay(r = null) {
+    const route = r || lastRouteData;
+    if (!route) return;
+    const distKm = route.distance / 1000;
+    const timeMin = Math.round(route.duration / 60);
+    const distText = distKm < 1.0 ? Math.round(route.distance) + " m" : distKm.toFixed(1) + " km";
+    document.getElementById('navDistance').innerText = distText;
+    document.getElementById('navTime').innerText = timeMin + " min";
+    if (isNavigating) {
+        document.getElementById('navTimeCountdown').innerText = timeMin + " min";
+        document.getElementById('navDistancePrecise').innerText = distText;
+        const arrival = new Date(); arrival.setSeconds(arrival.getSeconds() + route.duration);
+        document.getElementById('navArrivalTime').innerText = arrival.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (route.legs && route.legs[0].steps.length > 0) {
+            const s = route.legs[0].steps[0];
+            document.getElementById('nextStreetName').innerText = s.name || "Toward Destination";
+            document.getElementById('distanceToTurn').innerText = "In " + (s.distance < 1000 ? Math.round(s.distance) + " m" : (s.distance/1000).toFixed(1) + " km");
+            document.getElementById('nextTurnIcon').innerText = getManeuverIcon(s.maneuver.modifier);
+        }
+    }
+}
+
+function getManeuverIcon(m) {
+    switch(m) {
+        case 'left': return '⬅️'; case 'right': return '➡️'; case 'slight left': return '↖️'; case 'slight right': return '↗️';
+        case 'sharp left': return '↩️'; case 'sharp right': return '↪️'; case 'uturn': return '🔄'; default: return '⬆️';
+    }
+}
+
+// 🛰️ GLOBAL HANDSHAKE
+window.updateLocation = function(lat, lng, speed, heading) {
+    currentPos = [lng, lat];
+    if (userMarker) {
+        userMarker.setLngLat(currentPos);
+        if (speed > 2.0 && heading !== -1) userMarker.setRotation(heading);
+    }
+    syncDottedLine();
+    if (isNavigating && isCameraFollow) {
+        map.easeTo({ center: currentPos, zoom: 19, pitch: 65, bearing: heading !== -1 ? heading : map.getBearing(), duration: 900 });
+        updateETADisplay();
+    }
 };
 
-document.getElementById('btnCancelDrive').onclick = () => {
-    isNavigating = false; targetPos = null;
-    poiMarkers.forEach(m => m.remove()); poiMarkers = [];
+// 🚀 ACTIONS
+document.getElementById('btnStartDrive').onclick = () => {
+    isNavigating = true; isCameraFollow = true;
+    document.getElementById('searchContainer').classList.add('hidden');
+    document.getElementById('routingCard').classList.add('hidden');
+    document.getElementById('navDashboard').classList.remove('hidden');
+    map.jumpTo({ center: currentPos, zoom: 19, pitch: 65 });
+    updateETADisplay();
+};
+
+document.getElementById('btnCloseRouting').onclick = stopNavigation;
+document.getElementById('btnStopNav').onclick = stopNavigation;
+document.getElementById('btnDirections').onclick = () => { if (targetPos) { const b = [currentPos, targetPos].reduce((acc, c) => acc.extend(c), new maplibregl.LngLatBounds(currentPos, currentPos)); map.fitBounds(b, { padding: 100, duration: 1500 }); } };
+
+function stopNavigation() {
+    isNavigating = false; targetPos = null; clearPOIs();
     map.getSource('route').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+    if (map.getSource('route-dotted')) map.getSource('route-dotted').setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } });
+    document.getElementById('navDashboard').classList.add('hidden');
     document.getElementById('routingCard').classList.add('hidden');
     document.getElementById('searchContainer').classList.remove('hidden');
-    document.getElementById('btnStartDrive').classList.remove('hidden');
-    map.easeTo({ pitch: 45, zoom: 14 });
-};
-
-document.getElementById('btnRecenter').onclick = () => map.flyTo({ center: currentPos, zoom: 18, pitch: 0 });
-document.getElementById('btnVoice').onclick = () => { if (window.Android) window.Android.startVoiceRecognition(); };
-
-function showCustomToast(msg) {
-    const t = document.getElementById('customToast');
-    let icon = "🛡️"; // Default Aegis Icon
-    if (msg.includes("Saved") || msg.includes("Successfully")) icon = "✅";
-    if (msg.includes("found") || msg.includes("failed")) icon = "❌";
-    if (msg.includes("Pinpointing")) icon = "🔍";
-    if (msg.includes("Click")) icon = "📍";
-
-    t.innerHTML = `<span class="toast-icon">${icon}</span> <span>${msg}</span>`;
-    t.classList.remove('hidden');
-    // Add small delay to ensure class is removed before adding visible for animation
-    setTimeout(() => {
-        t.classList.add('visible');
-    }, 10);
-
-    setTimeout(() => {
-        t.classList.remove('visible');
-        setTimeout(() => t.classList.add('hidden'), 400);
-    }, 3000);
+    map.easeTo({ pitch: 45, zoom: 14, bearing: 0 });
 }
 
 function clearPOIs() { poiMarkers.forEach(m => m.remove()); poiMarkers = []; }
 function debounce(f, w) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => f(...a), w); }; }
+function showCustomToast(msg) { const t = document.getElementById('customToast'); t.innerText = msg; t.classList.add('visible'); setTimeout(() => t.classList.remove('visible'), 3000); }
