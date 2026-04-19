@@ -203,6 +203,39 @@ class MonitorFragment : Fragment() {
 
     private var lastVibrationTime = 0L
 
+    private fun triggerVibration(duration: Long) {
+        try {
+            val ctx = context ?: return
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vibratorManager = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager
+                vibratorManager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+            }
+
+            if (vibrator.hasVibrator()) {
+                // 🚀 HIGH PRIORITY: Use USAGE_ALARM to bypass certain system restrictions and ensure visibility
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    vibrator.vibrate(
+                        android.os.VibrationEffect.createOneShot(duration, android.os.VibrationEffect.DEFAULT_AMPLITUDE),
+                        audioAttributes
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(duration)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Vibration Error: ${e.message}")
+        }
+    }
+
     private fun playAudioAlarm() {
         val activity = activity ?: return
         if (!isAdded) return
@@ -214,11 +247,8 @@ class MonitorFragment : Fragment() {
         if (vibrationEnabled) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastVibrationTime > 1500) { // Vibrate every 1.5s during danger
-                val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
-                if (vibrator.hasVibrator()) {
-                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(800, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-                    lastVibrationTime = currentTime
-                }
+                triggerVibration(1000) // 🚀 Increased to 1s for better feedback
+                lastVibrationTime = currentTime
             }
         }
 

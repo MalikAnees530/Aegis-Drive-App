@@ -128,17 +128,12 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // About Row (Long click to reset for developers/senior test)
+        // About Row
         findViewById<View>(R.id.rowAbout)?.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("Aegis Drive Intelligence")
-                .setMessage("Version 1.0.0 (Production)\n\nDeveloped for high-stakes driver safety monitoring using real-time Computer Vision and LSTM.\n\nWould you like to reset your driving statistics?")
+                .setMessage("Version 1.0.0 \n\nAegis Drive is an advanced digital guardian engineered to prevent fatigue-related road accidents. Powered by zero-latency Edge AI, real-time Computer Vision, and predictive LSTM neural networks, it continuously monitors physiological states to deliver proactive alerts and ensure maximum driver safety.")
                 .setPositiveButton("CLOSE", null)
-                .setNeutralButton("RESET STATS") { _, _ ->
-                    getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
-                    loadUserData()
-                    AegisNotify.show(this, "Statistics Reset Successfully", AegisNotify.Type.SUCCESS)
-                }
                 .show()
         }
 
