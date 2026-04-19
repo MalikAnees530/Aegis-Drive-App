@@ -129,23 +129,28 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateUIComponents(view: View, score: Int, alerts: Int, seconds: Int, date: String, sessionCount: Int, lifetimeSafety: Double) {
-        val hours = seconds / 3600
-        val mins = (seconds % 3600) / 60
-        val secs = seconds % 60
-        val formattedTime = if (hours > 0) "${hours}h ${mins}m" else "${mins}m ${secs}s"
-
-        // Last Session Results
-        view.findViewById<TextView>(R.id.tvScoreValue)?.text = score.toString()
-        view.findViewById<TextView>(R.id.tvDriveTimeValue)?.text = formattedTime
-        view.findViewById<TextView>(R.id.tvAlertsValue)?.text = alerts.toString()
+        // 🚀 PRECISION LOGIC: High-Precision Duration Formatting (H, M, S)
+        val totalHours = seconds / 3600
+        val totalMinutes = (seconds % 3600) / 60
+        val totalSecs = seconds % 60
         
-        // 🚀 LOGIC 1: Est. Focus Level (Current/Last Session Performance)
-        val baseFocus = score.coerceIn(0, 100)
-        val penalty = (alerts * 4).coerceIn(0, 50)
-        val focusLevel = (baseFocus - penalty).coerceIn(0, 100)
+        val formattedDuration = when {
+            totalHours > 0 -> String.format(Locale.US, "%dh %dm %ds", totalHours, totalMinutes, totalSecs)
+            totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalSecs)
+            else -> String.format(Locale.US, "%ds", totalSecs)
+        }
+
+        // UI Mapping: Last Session Results
+        view.findViewById<TextView>(R.id.tvScoreValue)?.text = score.toString() // LAST SESSION SCORE
+        view.findViewById<TextView>(R.id.tvDriveTimeValue)?.text = formattedDuration // Last Drive Duration (Fixed Format)
+        view.findViewById<TextView>(R.id.tvAlertsValue)?.text = alerts.toString() // Total Alerts Fired (This Session)
+        
+        // 🚀 FORMULA: Est. Focus Level (Quality of last session)
+        // We deduct 4% for every alert fired to represent true focus loss
+        val focusLevel = (score - (alerts * 4)).coerceIn(0, 100)
         view.findViewById<TextView>(R.id.tvFocusValue)?.text = "$focusLevel%"
 
-        // 🚀 LOGIC 2: Safety % (Lifetime Average Reliability)
+        // 🚀 FORMULA: Safety Rating (Lifetime Reliability Average)
         view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f%%", lifetimeSafety)
 
         val tvHistoryTitle = view.findViewById<TextView>(R.id.tvHistoryTitle)

@@ -14,6 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.util.Locale
 
@@ -36,6 +37,41 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadUserData()
+        syncStatsFromCloud()
+    }
+
+    private fun syncStatsFromCloud() {
+        try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("DriveSessions").get().addOnSuccessListener { documents ->
+                if (!documents.isEmpty) {
+                    var totalSecs = 0
+                    var totalScore = 0
+                    var count = 0
+
+                    for (doc in documents) {
+                        val duration = doc.getLong("duration")?.toInt() ?: 0
+                        val score = doc.getLong("score")?.toInt() ?: 0
+                        
+                        totalSecs += duration
+                        totalScore += score
+                        count++
+                    }
+
+                    val dataPrefs = getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+                    dataPrefs.edit().apply {
+                        putInt("TOTAL_DRIVE_TIME", totalSecs)
+                        putInt("TOTAL_SCORE_SUM", totalScore)
+                        putInt("TOTAL_SESSIONS", count)
+                        apply()
+                    }
+                    // Refresh UI with synced data
+                    updateStatsUI()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun loadUserData() {
@@ -56,6 +92,15 @@ class SettingsActivity : AppCompatActivity() {
                 }
             }
 
+            updateStatsUI()
+            
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun updateStatsUI() {
+        try {
             // 🚀 SYNC: Load real-time stats from AegisData
             val dataPrefs = getSharedPreferences("AegisData", Context.MODE_PRIVATE)
             
@@ -85,10 +130,7 @@ class SettingsActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
             findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", avgSafetyPercent)
             findViewById<TextView>(R.id.tvStatTrips)?.text = totalSessions.toString()
-            
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { }
     }
 
     private fun setupListeners() {
