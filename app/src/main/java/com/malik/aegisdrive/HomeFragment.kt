@@ -227,11 +227,17 @@ class HomeFragment : Fragment() {
             catch (_: Exception) { AegisNotify.show(requireContext(), "Opening Settings...", AegisNotify.Type.INFO) }
         }
         view.findViewById<MaterialCardView>(R.id.btnNotif)?.setOnClickListener {
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Aegis Security Logs")
-                .setMessage("✔ Core AI Active\n✔ Cloud Sync Live\n✔ All System Works Properly")
-                .setPositiveButton("OK") { d, _ -> d.dismiss() }
-                .show()
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_security_logs, null)
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.CustomDialogTheme)
+                .setView(dialogView)
+                .create()
+
+            dialogView.findViewById<View>(R.id.btnConfirm)?.setOnClickListener {
+                dialog.dismiss()
+            }
+
+            dialog.show()
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         }
         view.findViewById<TextView>(R.id.btnViewAllSessions)?.setOnClickListener {
             startActivity(Intent(requireContext(), SessionHistoryActivity::class.java))
