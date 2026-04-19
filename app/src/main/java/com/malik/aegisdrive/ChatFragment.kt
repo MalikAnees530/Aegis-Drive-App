@@ -1,25 +1,34 @@
 package com.malik.aegisdrive
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
+import android.graphics.Typeface
+import android.location.Location
+import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
+import android.text.Html
+import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
-import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,40 +39,33 @@ import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
+
+data class ChatSession(val id: String, var name: String, val messages: MutableList<Pair<String, String>>)
 
 class ChatFragment : Fragment() {
 
-    // ── GROQ API config ──────────────────────────────────────────────────────────
     private val GROQ_API_KEY = "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"
     private val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-    private val SYSTEM_PROMPT = "You are Aegis AI, the intelligent driving assistant built " +
-            "into the AegisDrive app. You help drivers with safety advice, navigation tips, " +
-            "driving scores, alerts, and any general questions. Keep your responses VERY concise, short, and conversational, like a real voice assistant. " +
-            "Always prioritize driver safety."
-
+    private lateinit var drawerLayout: DrawerLayout
     private lateinit var chatMessagesContainer: LinearLayout
+    private lateinit var sessionsContainer: LinearLayout
     private lateinit var chatScrollView: ScrollView
     private lateinit var etChatInput: EditText
-    private lateinit var btnSend: MaterialCardView
-    private lateinit var btnMic: MaterialCardView
-    private lateinit var btnClearChat: MaterialCardView
-
+    private lateinit var tvSafetyMirror: TextView
+    
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var isListening = false
     private var ttsReady = false
-
-    // State variable for Live Mode
     private var isLiveMode = false
 
-    private val conversationHistory = mutableListOf<Pair<String, String>>()
+    private var currentSession: ChatSession = ChatSession(UUID.randomUUID().toString(), "New Chat", mutableListOf())
+    private var allSessions = mutableListOf<ChatSession>()
 
-    companion object {
-        private const val MIC_PERMISSION_CODE = 101
+    private val sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "LAST_SCORE") activity?.runOnUiThread { syncSafetyStatus() }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -72,375 +74,298 @@ class ChatFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        chatMessagesContainer = view.findViewById(R.id.chatMessagesContainer)
-        chatScrollView        = view.findViewById(R.id.chatScrollView)
-        etChatInput           = view.findViewById(R.id.etChatInput)
-        btnSend               = view.findViewById(R.id.btnSend)
-        btnMic                = view.findViewById(R.id.btnMic)
-        btnClearChat          = view.findViewById(R.id.btnClearChat)
-
-        chatMessagesContainer.removeAllViews()
-        addAiMessage("Hello! I am Aegis AI. Ask me anything about driving safety, navigation, or anything else. I am here to help!")
-
-        setupQuickChips(view)
-
-        btnSend.setOnClickListener {
-            val text = etChatInput.text.toString().trim()
-            if (text.isNotEmpty()) {
-                disableLiveMode()
-                sendMessage(text, isVoiceInput = false)
-                etChatInput.setText("")
-            }
-        }
-
-        etChatInput.setOnEditorActionListener { _, _, _ ->
-            val text = etChatInput.text.toString().trim()
-            if (text.isNotEmpty()) {
-                disableLiveMode()
-                sendMessage(text, isVoiceInput = false)
-                etChatInput.setText("")
-            }
-            true
-        }
-
-        btnMic.setOnClickListener { handleMicClick() }
-
-        btnClearChat.setOnClickListener {
-            chatMessagesContainer.removeAllViews()
-            conversationHistory.clear()
-            disableLiveMode()
-            addAiMessage("Chat cleared! How can I help you?")
-        }
-
+        bindViews(view)
+        loadSessions()
         initTTS()
-    }
+        syncSafetyStatus()
+        
+        requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
 
-    private fun disableLiveMode() {
-        isLiveMode = false
-        stopListening()
-        tts?.stop()
-    }
-
-    private fun setupQuickChips(view: View) {
-        val scrollView = view.findViewById<HorizontalScrollView>(R.id.quickChipsRow) ?: return
-        val chipsContainer = scrollView.getChildAt(0) as? LinearLayout ?: return
-        val chipTexts = listOf("My safety score", "Navigate home", "Nearest hospital")
-
-        for (i in 0 until chipsContainer.childCount) {
-            val chip = chipsContainer.getChildAt(i) as? MaterialCardView ?: continue
-            val label = chipTexts.getOrNull(i) ?: continue
-            chip.setOnClickListener {
-                disableLiveMode()
-                sendMessage(label, isVoiceInput = false)
-            }
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    //  TEXT TO SPEECH (VOICE QUALITY & MIC LOOP FIX)
-    // ══════════════════════════════════════════════════════════════
-    private fun initTTS() {
-        tts = TextToSpeech(requireContext()) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.US
-
-                // 🚀 FIX 2: Voice Tuning (Less Robotic)
-                tts?.setPitch(1.1f)      // Slightly higher pitch for a friendly tone
-                tts?.setSpeechRate(0.95f) // Slightly slower so it's easy to understand
-
-                ttsReady = true
-
-                tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                    override fun onStart(utteranceId: String?) {}
-
-                    override fun onDone(utteranceId: String?) {
-                        if (isLiveMode && utteranceId == "AI_RESPONSE") {
-                            // 🚀 FIX 1: Add a 500ms delay so Mic and Speaker don't collide
-                            activity?.runOnUiThread {
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    startListening()
-                                }, 500)
-                            }
-                        }
-                    }
-
-                    override fun onError(utteranceId: String?) {
-                        if (isLiveMode) {
-                            activity?.runOnUiThread {
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    startListening()
-                                }, 500)
-                            }
-                        }
-                    }
-                })
-            }
-        }
-    }
-
-    private fun speak(text: String) {
-        if (ttsReady) {
-            val clean = text.replace(Regex("[*_#`]"), "")
-            tts?.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "AI_RESPONSE")
-        }
-    }
-
-    // ══════════════════════════════════════════════════════════════
-    //  VOICE INPUT
-    // ══════════════════════════════════════════════════════════════
-    private fun handleMicClick() {
-        val permission = android.Manifest.permission.RECORD_AUDIO
-        if (requireContext().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(permission), MIC_PERMISSION_CODE)
-            return
-        }
-
-        if (isLiveMode || isListening) {
-            disableLiveMode()
-            Toast.makeText(requireContext(), "Live Mode Disabled", Toast.LENGTH_SHORT).show()
+        if (currentSession.messages.isEmpty()) {
+            addAiMessage("Hello Driver! I am Aegis AI. I can check your safety score or navigate you home. How can I assist you?")
         } else {
-            isLiveMode = true
-            Toast.makeText(requireContext(), "Live Mode Enabled", Toast.LENGTH_SHORT).show()
-            startListening()
+            renderCurrentSession()
         }
+
+        view.findViewById<MaterialCardView>(R.id.btnSend).setOnClickListener { handleSend() }
+        view.findViewById<MaterialCardView>(R.id.btnMic).setOnClickListener { handleMicClick() }
+        view.findViewById<MaterialCardView>(R.id.btnMenu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+        view.findViewById<MaterialCardView>(R.id.btnNewChat).setOnClickListener { startNewChat() }
+        view.findViewById<View>(R.id.btnDeleteAllSessions).setOnClickListener { deleteAllSessions() }
+
+        setupChips(view)
+        renderSessionList()
     }
 
-    private fun startListening() {
-        if (isListening) return // Safety check to prevent double listening
+    private fun bindViews(view: View) {
+        drawerLayout = view.findViewById(R.id.drawerLayout)
+        chatMessagesContainer = view.findViewById(R.id.chatMessagesContainer)
+        sessionsContainer = view.findViewById(R.id.sessionsContainer)
+        chatScrollView = view.findViewById(R.id.chatScrollView)
+        etChatInput = view.findViewById(R.id.etChatInput)
+        tvSafetyMirror = view.findViewById(R.id.tvSafetyMirror)
+    }
 
-        val isEmulator = Build.FINGERPRINT.contains("generic") || Build.MODEL.contains("Emulator")
-        if (isEmulator || !SpeechRecognizer.isRecognitionAvailable(requireContext())) {
-            showVoiceInputDialog()
-            return
-        }
+    private fun setupChips(view: View) {
+        view.findViewById<View>(R.id.chipSafety).setOnClickListener { sendMessage("My current safety score?") }
+        view.findViewById<View>(R.id.chipHome).setOnClickListener { navigateHome() }
+        
+        // Hide hospital chip if it exists in the layout but we want it gone
+        view.findViewById<View>(R.id.chipHospital)?.visibility = View.GONE
+    }
 
-        isListening = true
-        setMicActive(true)
-
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {}
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onPartialResults(partialResults: Bundle?) {}
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val spokenText = matches?.firstOrNull() ?: ""
-
-                isListening = false
-                setMicActive(false)
-
-                if (spokenText.isNotEmpty()) {
-                    sendMessage(spokenText, isVoiceInput = true)
-                } else if (isLiveMode) {
-                    // Start listening again if no words were caught but live mode is on
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        startListening()
-                    }, 500)
-                }
-            }
-
-            override fun onError(error: Int) {
-                activity?.runOnUiThread {
-                    isListening = false
-                    setMicActive(false)
-
-                    if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                        isLiveMode = false
-                        Toast.makeText(requireContext(), "Live Mode Paused (Silence)", Toast.LENGTH_SHORT).show()
-                    } else {
-                        showVoiceInputDialog()
-                    }
-                }
-            }
-
-            override fun onEndOfSpeech() {
-                isListening = false
-                setMicActive(false)
-            }
-        })
-
+    private fun syncSafetyStatus() {
+        val prefs = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE) ?: return
+        val score = prefs.getInt("LAST_SCORE", 100)
+        val status = if (score > 75) "AI SAFE" else if (score > 45) "AI WARNING" else "AI DANGER"
+        val color = if (score > 75) "#22C55E" else if (score > 45) "#F59E0B" else "#EF4444"
+        
+        tvSafetyMirror.text = "$status • $score%"
         try {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            }
-            speechRecognizer?.startListening(intent)
-        } catch (e: Exception) {
-            disableLiveMode()
-            showVoiceInputDialog()
+            tvSafetyMirror.setTextColor(android.graphics.Color.parseColor(color))
+        } catch (e: Exception) {}
+    }
+
+    private fun handleSend() {
+        val text = etChatInput.text.toString().trim()
+        if (text.isNotEmpty()) {
+            sendMessage(text)
+            etChatInput.setText("")
         }
     }
 
-    private fun showVoiceInputDialog() {
-        val builder = android.app.AlertDialog.Builder(requireContext())
-        builder.setTitle("Voice Emulator")
-        builder.setMessage("Type message for Live Mode:")
-
-        val input = android.widget.EditText(requireContext())
-        input.setTextColor(resources.getColor(android.R.color.black, null))
-        builder.setView(input)
-
-        builder.setPositiveButton("Send") { _, _ ->
-            val text = input.text.toString().trim()
-            if (text.isNotEmpty()) sendMessage(text, isVoiceInput = true)
+    private fun sendMessage(text: String) {
+        if (currentSession.messages.isEmpty()) {
+            currentSession.name = if (text.length > 20) text.substring(0, 18) + "..." else text
+            if (!allSessions.contains(currentSession)) allSessions.add(0, currentSession)
+            renderSessionList()
         }
-        builder.setNegativeButton("Cancel") { _, _ ->
-            disableLiveMode()
-        }
-        builder.show()
-    }
-
-    private fun stopListening() {
-        isListening = false
-        activity?.runOnUiThread { setMicActive(false) }
-
-        try {
-            speechRecognizer?.stopListening()
-            speechRecognizer?.destroy()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            speechRecognizer = null
-        }
-    }
-
-    private fun setMicActive(active: Boolean) {
-        val mic = view?.findViewById<MaterialCardView>(R.id.btnMic) ?: return
-        val color = if (active || isLiveMode)
-            resources.getColor(R.color.status_danger, null)
-        else
-            resources.getColor(R.color.accent_primary, null)
-        mic.setCardBackgroundColor(color)
-    }
-
-    private fun sendMessage(userText: String, isVoiceInput: Boolean) {
-        addUserMessage(userText)
-        val typingView = addTypingIndicator()
-        conversationHistory.add(Pair("user", userText))
-
+        
+        addUserMessage(text)
+        val typing = addTypingIndicator()
+        currentSession.messages.add(Pair("user", text))
+        
         CoroutineScope(Dispatchers.IO).launch {
-            val response = callGroqAPI(userText)
+            val response = callGroqAPI(text)
             withContext(Dispatchers.Main) {
-                chatMessagesContainer.removeView(typingView)
+                chatMessagesContainer.removeView(typing)
                 addAiMessage(response)
-
-                if (isVoiceInput) {
-                    speak(response)
-                } else {
-                    disableLiveMode()
-                }
-
-                conversationHistory.add(Pair("assistant", response))
+                currentSession.messages.add(Pair("assistant", response))
+                saveSessions()
+                if (isLiveMode) speak(response)
             }
         }
+    }
+
+    private fun startNewChat() {
+        currentSession = ChatSession(UUID.randomUUID().toString(), "New Chat", mutableListOf())
+        chatMessagesContainer.removeAllViews()
+        addAiMessage("New session started. How can I assist you?")
+        drawerLayout.closeDrawer(GravityCompat.START)
+    }
+
+    private fun renderCurrentSession() {
+        chatMessagesContainer.removeAllViews()
+        for (msg in currentSession.messages) {
+            if (msg.first == "user") addUserMessage(msg.second, false)
+            else addAiMessage(msg.second, false)
+        }
+        scrollToBottom()
+    }
+
+    private fun renderSessionList() {
+        sessionsContainer.removeAllViews()
+        for (session in allSessions) {
+            val card = MaterialCardView(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(0, 0, 0, dpToPx(8))
+                }
+                radius = dpToPx(12).toFloat()
+                cardElevation = 0f
+                strokeColor = resources.getColor(R.color.border_subtle, null)
+                strokeWidth = dpToPx(1)
+                setCardBackgroundColor(if (session == currentSession) resources.getColor(R.color.bg_elevated, null) else android.graphics.Color.TRANSPARENT)
+            }
+
+            val tv = TextView(requireContext()).apply {
+                text = session.name
+                setTextColor(resources.getColor(R.color.text_primary, null))
+                setPadding(dpToPx(16), dpToPx(14), dpToPx(16), dpToPx(14))
+                textSize = 14f
+                typeface = if (session == currentSession) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            }
+            
+            card.addView(tv)
+            card.setOnClickListener {
+                currentSession = session
+                renderCurrentSession()
+                renderSessionList()
+                drawerLayout.closeDrawer(GravityCompat.START)
+            }
+            
+            card.setOnLongClickListener {
+                deleteSession(session)
+                true
+            }
+            
+            sessionsContainer.addView(card)
+        }
+    }
+
+    private fun deleteSession(session: ChatSession) {
+        allSessions.remove(session)
+        if (currentSession == session) startNewChat()
+        saveSessions()
+        renderSessionList()
+        Toast.makeText(requireContext(), "Session deleted", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun deleteAllSessions() {
+        allSessions.clear()
+        startNewChat()
+        saveSessions()
+        renderSessionList()
+        Toast.makeText(requireContext(), "All history cleared", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun saveSessions() {
+        val prefs = requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE)
+        val array = JSONArray()
+        for (session in allSessions) {
+            val obj = JSONObject().apply {
+                put("id", session.id)
+                put("name", session.name)
+                val msgs = JSONArray()
+                for (m in session.messages) {
+                    msgs.put(JSONObject().apply { put("r", m.first); put("c", m.second) })
+                }
+                put("msgs", msgs)
+            }
+            array.put(obj)
+        }
+        prefs.edit().putString("SESSIONS_JSON", array.toString()).apply()
+    }
+
+    private fun loadSessions() {
+        val prefs = requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE)
+        val json = prefs.getString("SESSIONS_JSON", null) ?: return
+        try {
+            val array = JSONArray(json)
+            allSessions.clear()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val id = obj.getString("id")
+                val name = obj.getString("name")
+                val msgs = mutableListOf<Pair<String, String>>()
+                val mArray = obj.getJSONArray("msgs")
+                for (j in 0 until mArray.length()) {
+                    val mObj = mArray.getJSONObject(j)
+                    msgs.add(Pair(mObj.getString("r"), mObj.getString("c")))
+                }
+                allSessions.add(ChatSession(id, name, msgs))
+            }
+            if (allSessions.isNotEmpty()) currentSession = allSessions[0]
+        } catch (e: Exception) {}
+    }
+
+    private fun navigateHome() {
+        val prefs = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE) ?: return
+        val homeLat = prefs.getFloat("HOME_LAT", 0f)
+        val homeLon = prefs.getFloat("HOME_LON", 0f)
+
+        if (homeLat == 0f) {
+            addAiMessage("You haven't set a Home location yet. Please go to the Navigate tab, click Home 🏠, then 'Edit Home' to set it.")
+        } else {
+            addAiMessage("Redirecting to Map and starting your drive home...")
+            startNavigation(homeLat.toDouble(), homeLon.toDouble(), "Home")
+        }
+    }
+
+    private fun startNavigation(lat: Double, lon: Double, name: String) {
+        val prefs = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE) ?: return
+        prefs.edit().apply {
+            putString("NAV_CMD", "START")
+            putFloat("NAV_LAT", lat.toFloat())
+            putFloat("NAV_LON", lon.toFloat())
+            putString("NAV_NAME", name)
+            apply()
+        }
+        val nav = activity?.findViewById<BottomNavigationView>(R.id.bottomNavigationView)
+        nav?.selectedItemId = R.id.navigateFragment
     }
 
     private fun callGroqAPI(userMessage: String): String {
         return try {
-            val url  = URL(GROQ_URL)
-            val conn = url.openConnection() as HttpURLConnection
+            val conn = URL(GROQ_URL).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"
             conn.setRequestProperty("Authorization", "Bearer $GROQ_API_KEY")
             conn.setRequestProperty("Content-Type", "application/json")
-            conn.doOutput     = true
-            conn.connectTimeout = 15000
-            conn.readTimeout    = 15000
+            conn.doOutput = true
+            
+            val prefs = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            val score = prefs?.getInt("LAST_SCORE", 100) ?: 100
 
-            val messagesArray = JSONArray()
+            val systemPrompt = "You are Aegis AI, a safety assistant. Driver safety score is $score%."
 
-            val sysMsg = JSONObject()
-            sysMsg.put("role", "system")
-            sysMsg.put("content", SYSTEM_PROMPT)
-            messagesArray.put(sysMsg)
-
-            val history = if (conversationHistory.size > 6) conversationHistory.takeLast(6) else conversationHistory
-            for ((role, text) in history) {
-                val msg = JSONObject()
-                msg.put("role", role)
-                msg.put("content", text)
-                messagesArray.put(msg)
+            val body = JSONObject().apply {
+                put("model", "llama-3.3-70b-versatile")
+                put("messages", JSONArray().apply {
+                    put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) })
+                    val history = currentSession.messages.takeLast(6)
+                    for (m in history) {
+                        put(JSONObject().apply { put("role", if (m.first == "user") "user" else "assistant"); put("content", m.second) })
+                    }
+                    put(JSONObject().apply { put("role", "user"); put("content", userMessage) })
+                })
             }
-
-            val userMsgObj = JSONObject()
-            userMsgObj.put("role", "user")
-            userMsgObj.put("content", userMessage)
-            messagesArray.put(userMsgObj)
-
-            val body = JSONObject()
-            body.put("model", "llama-3.3-70b-versatile")
-            body.put("messages", messagesArray)
-            body.put("temperature", 0.7)
-            body.put("max_tokens", 512)
 
             val writer = OutputStreamWriter(conn.outputStream)
-            writer.write(body.toString())
-            writer.flush()
-            writer.close()
+            writer.write(body.toString()); writer.flush(); writer.close()
 
-            when (conn.responseCode) {
-                HttpURLConnection.HTTP_OK -> {
-                    val raw = conn.inputStream.bufferedReader().readText()
-                    JSONObject(raw).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-                }
-                else -> {
-                    val errorBody = conn.errorStream?.bufferedReader()?.readText() ?: "No details"
-                    "API Error: $errorBody"
-                }
-            }
-        } catch (e: Exception) {
-            "Network error. Please try again."
-        }
+            if (conn.responseCode == 200) {
+                val raw = conn.inputStream.bufferedReader().readText()
+                JSONObject(raw).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
+            } else "Aegis AI is momentarily busy. Please try again."
+        } catch (e: Exception) { "Connection unstable." }
     }
 
-    private fun addUserMessage(text: String) {
+    private fun addUserMessage(text: String, scroll: Boolean = true) {
         val container = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            gravity     = android.view.Gravity.END
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.setMargins(0, 0, 0, dpToPx(10)) }
+            gravity = android.view.Gravity.END
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dpToPx(12)) }
         }
 
         val card = MaterialCardView(requireContext()).apply {
             setCardBackgroundColor(resources.getColor(R.color.accent_primary, null))
-            radius = dpToPx(14).toFloat()
+            radius = dpToPx(16).toFloat()
             cardElevation = 0f
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
 
         val tv = TextView(requireContext()).apply {
             this.text = text
-            textSize  = 12f
-            setTextColor(resources.getColor(R.color.text_primary, null))
-            setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
-            maxWidth = dpToPx(240)
+            setTextColor(android.graphics.Color.WHITE)
+            setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10))
+            textSize = 14f
+            maxWidth = dpToPx(260)
         }
         card.addView(tv)
-        val time = TextView(requireContext()).apply {
-            this.text = getCurrentTime()
-            textSize  = 9f
-            setTextColor(resources.getColor(R.color.text_disabled, null))
-            setPadding(0, dpToPx(3), 0, 0)
-        }
         container.addView(card)
-        container.addView(time)
         chatMessagesContainer.addView(container)
-        scrollToBottom()
+        if (scroll) scrollToBottom()
     }
 
-    private fun addAiMessage(text: String) {
+    private fun addAiMessage(text: String, scroll: Boolean = true) {
         val container = LinearLayout(requireContext()).apply {
-            orientation  = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.setMargins(0, 0, 0, dpToPx(10)) }
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, 0, 0, dpToPx(12)) }
         }
 
         val card = MaterialCardView(requireContext()).apply {
             setCardBackgroundColor(resources.getColor(R.color.bg_surface, null))
-            radius      = dpToPx(14).toFloat()
+            radius = dpToPx(16).toFloat()
             cardElevation = 0f
             strokeColor = resources.getColor(R.color.border_subtle, null)
             strokeWidth = dpToPx(1)
@@ -448,68 +373,81 @@ class ChatFragment : Fragment() {
         }
 
         val tv = TextView(requireContext()).apply {
-            this.text = text
-            textSize  = 12f
+            this.text = Html.fromHtml(text, Html.FROM_HTML_MODE_COMPACT)
             setTextColor(resources.getColor(R.color.text_secondary, null))
-            setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
-            maxWidth = dpToPx(240)
+            setPadding(dpToPx(14), dpToPx(10), dpToPx(14), dpToPx(10))
+            textSize = 14f
+            maxWidth = dpToPx(260)
+            movementMethod = LinkMovementMethod.getInstance()
         }
         card.addView(tv)
-        val time = TextView(requireContext()).apply {
-            this.text = getCurrentTime()
-            textSize  = 9f
-            setTextColor(resources.getColor(R.color.text_disabled, null))
-            setPadding(0, dpToPx(3), 0, 0)
-        }
         container.addView(card)
-        container.addView(time)
         chatMessagesContainer.addView(container)
-        scrollToBottom()
+        if (scroll) scrollToBottom()
     }
 
     private fun addTypingIndicator(): View {
-        val container = LinearLayout(requireContext()).apply {
-            orientation  = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).also { it.setMargins(0, 0, 0, dpToPx(10)) }
-        }
-
-        val card = MaterialCardView(requireContext()).apply {
-            setCardBackgroundColor(resources.getColor(R.color.bg_surface, null))
-            radius      = dpToPx(14).toFloat()
-            cardElevation = 0f
-            strokeColor = resources.getColor(R.color.border_subtle, null)
-            strokeWidth = dpToPx(1)
-        }
-
-        val tv = TextView(requireContext()).apply {
-            text     = "Aegis is thinking..."
-            textSize = 12f
+        val tv = TextView(requireContext()).apply { 
+            text = "Aegis is thinking..."
             setTextColor(resources.getColor(R.color.text_disabled, null))
-            setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
+            setPadding(0, 0, 0, dpToPx(12))
+            textSize = 12f
         }
-        card.addView(tv)
-        container.addView(card)
-        chatMessagesContainer.addView(container)
+        chatMessagesContainer.addView(tv)
         scrollToBottom()
-        return container
+        return tv
     }
 
-    private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(ScrollView.FOCUS_DOWN) } }
-    private fun getCurrentTime(): String = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
-    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+    private fun handleMicClick() {
+        val permission = Manifest.permission.RECORD_AUDIO
+        if (requireContext().checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(permission), 101); return
+        }
+        if (isListening) stopListening() else startListening()
+    }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == MIC_PERMISSION_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startListening()
-        } else {
-            Toast.makeText(requireContext(), "Microphone permission is needed for voice input", Toast.LENGTH_SHORT).show()
+    private fun startListening() {
+        try {
+            isListening = true; isLiveMode = true
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
+            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                override fun onResults(r: Bundle?) {
+                    val matches = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    if (!matches.isNullOrEmpty()) sendMessage(matches[0])
+                    stopListening()
+                }
+                override fun onReadyForSpeech(p0: Bundle?) { Toast.makeText(context, "Listening...", Toast.LENGTH_SHORT).show() }
+                override fun onBeginningOfSpeech() {}
+                override fun onRmsChanged(p0: Float) {}
+                override fun onBufferReceived(p0: ByteArray?) {}
+                override fun onEndOfSpeech() { stopListening() }
+                override fun onError(p0: Int) { stopListening(); Toast.makeText(context, "Try speaking again.", Toast.LENGTH_SHORT).show() }
+                override fun onPartialResults(p0: Bundle?) {}
+                override fun onEvent(p0: Int, p1: Bundle?) {}
+            })
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM) }
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) { stopListening() }
+    }
+
+    private fun stopListening() { 
+        isListening = false
+        activity?.runOnUiThread {
+            speechRecognizer?.stopListening()
+            speechRecognizer?.destroy()
+            speechRecognizer = null
         }
     }
 
-    override fun onDestroyView() {
+    private fun initTTS() { tts = TextToSpeech(requireContext()) { if (it == TextToSpeech.SUCCESS) ttsReady = true } }
+    private fun speak(t: String) { if (ttsReady) tts?.speak(t, TextToSpeech.QUEUE_FLUSH, null, "AI") }
+    private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(ScrollView.FOCUS_DOWN) } }
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+    
+    override fun onDestroyView() { 
         super.onDestroyView()
         speechRecognizer?.destroy()
-        tts?.stop()
         tts?.shutdown()
+        activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.unregisterOnSharedPreferenceChangeListener(sharedPrefsListener)
     }
 }

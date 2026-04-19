@@ -134,7 +134,34 @@ class NavigateFragment : Fragment(), LocationListener {
         return try { locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER) ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) } catch (e: Exception) { null }
     }
 
-    override fun onResume() { super.onResume(); syncPassiveSafetyStatus() }
+    override fun onResume() { 
+        super.onResume()
+        syncPassiveSafetyStatus() 
+        checkAndExecuteCommands()
+    }
+
+    private fun checkAndExecuteCommands() {
+        val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+        val cmd = prefs.getString("NAV_CMD", null)
+        if (cmd == "START") {
+            val lat = prefs.getFloat("NAV_LAT", 0f)
+            val lon = prefs.getFloat("NAV_LON", 0f)
+            val name = prefs.getString("NAV_NAME", "Destination")
+            
+            // Clear command immediately to prevent loops
+            prefs.edit().remove("NAV_CMD").apply()
+            
+            if (lat != 0f) {
+                handler.postDelayed({
+                    webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], '$name');", null)
+                    // Wait a bit for the route to plan then start
+                    handler.postDelayed({
+                        webView.evaluateJavascript("document.getElementById('btnStartDrive').click();", null)
+                    }, 1500)
+                }, 1000)
+            }
+        }
+    }
     
     // 🚀 SENIOR FIX: Strict Memory Leak Prevention for WebView
     override fun onDestroyView() {
@@ -162,11 +189,47 @@ class NavigateFragment : Fragment(), LocationListener {
         @JavascriptInterface
         fun startVoiceRecognition() {
             handler.post {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                val permission = Manifest.permission.RECORD_AUDIO
+                if (ActivityCompat.checkSelfPermission(mContext, permission) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(permission), 102)
+                    return@post
                 }
-                speechRecognizer?.startListening(intent)
+
+                try {
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak destination...")
+                    }
+                    speechRecognizer?.startListening(intent)
+                    Toast.makeText(mContext, "Listening...", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(mContext, "Speech recognizer failed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun saveHomeLocation(lat: Double, lon: Double) {
+            val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            prefs.edit().apply {
+                putFloat("HOME_LAT", lat.toFloat())
+                putFloat("HOME_LON", lon.toFloat())
+                apply()
+            }
+        }
+
+        @JavascriptInterface
+        fun triggerNavigateHome() {
+            val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            val lat = prefs.getFloat("HOME_LAT", 0f)
+            val lon = prefs.getFloat("HOME_LON", 0f)
+            if (lat != 0f) {
+                handler.post {
+                    webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], 'Home');", null)
+                }
+            } else {
+                handler.post { Toast.makeText(mContext, "Please set your Home location first.", Toast.LENGTH_SHORT).show() }
             }
         }
     }

@@ -16,9 +16,24 @@
         <div class="glass-card search-card">
             <button class="icon-btn-voice" id="btnVoice">🎙️</button>
             <input type="search" id="etSearch" placeholder="Search buildings, sectors, streets..." autocomplete="off">
+            <button class="icon-btn-plain" id="btnHome">🏠</button>
             <button class="icon-btn-plain" id="btnSearchSubmit">🔍</button>
         </div>
         <div id="suggestions" class="suggestions-list hidden"></div>
+        
+        <!-- 🚀 HOME ACTIONS MENU -->
+        <div id="homeMenu" class="glass-card menu-card hidden">
+            <div class="menu-item" id="menuNavigateHome">🚀 Navigate Home</div>
+            <div class="menu-item" id="menuEditHome">✏️ Edit Home</div>
+        </div>
+    </div>
+
+    <!-- 🚀 EDIT MODE OVERLAY -->
+    <div id="editOverlay" class="edit-overlay hidden">
+        <div class="overlay-content">
+            <p>Select your Home on the map</p>
+            <button id="btnCancelEdit" class="btn-action danger">CANCEL</button>
+        </div>
     </div>
 
     <!-- 🚀 NOTIFICATION ENGINE -->
