@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.malik.aegisdrive"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -52,10 +52,6 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-
-    // 🚀 NEW: Osmdroid (100% Free Offline Maps - No API Key Needed)
-    implementation("org.osmdroid:osmdroid-android:6.1.18")
-    implementation(libs.play.services.location)
 
     // CameraX Tools
     val cameraxVersion = "1.3.4"

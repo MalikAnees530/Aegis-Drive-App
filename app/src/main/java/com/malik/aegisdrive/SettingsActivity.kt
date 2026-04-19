@@ -64,19 +64,26 @@ class SettingsActivity : AppCompatActivity() {
             val totalScoreSum = dataPrefs.getInt("TOTAL_SCORE_SUM", 0)
             val totalSessions = dataPrefs.getInt("TOTAL_SESSIONS", 0)
 
+            // 🚀 SENIOR FIX: Cumulative Safety % (0-100)
+            val avgSafetyPercent = if (totalSessions > 0) {
+                totalScoreSum.toDouble() / totalSessions 
+            } else {
+                100.0 // Default to 100% for a clean professional start
+            }
+
+            // High-Precision Cumulative Time Formatting
             val totalHours = totalDriveSeconds / 3600
             val totalMinutes = (totalDriveSeconds % 3600) / 60
             val totalSecs = totalDriveSeconds % 60
-            val avgSafetyScore = if (totalSessions > 0) totalScoreSum.toDouble() / totalSessions else 100.0
-            val avgSafetyRating = (avgSafetyScore / 100.0) * 5.0
-
+            
             val driveTimeText = when {
-                totalHours > 0 -> "${totalHours}h ${totalMinutes}m ${totalSecs}s"
-                totalMinutes > 0 -> "${totalMinutes}m ${totalSecs}s"
-                else -> "${totalSecs}s"
+                totalHours > 0 -> String.format(Locale.US, "%dh %dm %ds", totalHours, totalMinutes, totalSecs)
+                totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalSecs)
+                else -> String.format(Locale.US, "%ds", totalSecs)
             }
+            
             findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
-            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f", avgSafetyRating)
+            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", avgSafetyPercent)
             findViewById<TextView>(R.id.tvStatTrips)?.text = totalSessions.toString()
             
         } catch (e: Exception) {
@@ -121,12 +128,17 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        // About Row
+        // About Row (Long click to reset for developers/senior test)
         findViewById<View>(R.id.rowAbout)?.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("Aegis Drive Intelligence")
-                .setMessage("Version 1.0.0 (Production)\n\nDeveloped for high-stakes driver safety monitoring using real-time Computer Vision and LSTM inference.\n\n© 2026 Aegis Security")
+                .setMessage("Version 1.0.0 (Production)\n\nDeveloped for high-stakes driver safety monitoring using real-time Computer Vision and LSTM.\n\nWould you like to reset your driving statistics?")
                 .setPositiveButton("CLOSE", null)
+                .setNeutralButton("RESET STATS") { _, _ ->
+                    getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
+                    loadUserData()
+                    Toast.makeText(this, "Statistics Reset Successfully", Toast.LENGTH_SHORT).show()
+                }
                 .show()
         }
 

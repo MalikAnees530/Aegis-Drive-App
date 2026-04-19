@@ -166,14 +166,14 @@
                         android:id="@+id/tvStatSafety"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5.0"
+                        android:text="100%"
                         android:textColor="@color/status_safe"
                         android:textSize="18sp"
                         android:textStyle="bold"/>
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Safety"
+                        android:text="Safety %"
                         android:textColor="@color/text_disabled"
                         android:textSize="10sp"
                         android:layout_marginTop="2dp"
@@ -247,13 +247,12 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingHorizontal="16dp">
-                        <TextView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:gravity="center"
-                            android:text="🔊"
-                            android:textSize="16sp"
-                            android:layout_marginEnd="16dp"/>
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_volume"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="24dp"/>
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -264,13 +263,14 @@
                                 android:layout_height="wrap_content"
                                 android:text="Audible Alerts"
                                 android:textColor="@color/text_primary"
-                                android:textSize="15sp" />
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Play alarm on drowsiness"
                                 android:textColor="@color/text_disabled"
-                                android:textSize="10sp" />
+                                android:textSize="11sp" />
                         </LinearLayout>
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switchAlertSound"
@@ -290,31 +290,30 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:paddingHorizontal="16dp">
-                        <TextView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:gravity="center"
-                            android:text="📳"
-                            android:textSize="16sp"
-                            android:layout_marginEnd="16dp"/>
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_vibrate"
+                            app:tint="@color/text_primary"
+                            android:layout_marginEnd="24dp"/>
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:orientation="vertical">
                             <TextView
-                                android:layout_width="0dp"
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
                                 android:text="Haptic Feedback"
                                 android:textColor="@color/text_primary"
-                                android:textSize="15sp" />
+                                android:textSize="15sp"
+                                android:textStyle="bold" />
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Vibrate phone on danger"
                                 android:textColor="@color/text_disabled"
-                                android:textSize="10sp" />
+                                android:textSize="11sp" />
                         </LinearLayout>
                         <com.google.android.material.switchmaterial.SwitchMaterial
                             android:id="@+id/switchVibration"

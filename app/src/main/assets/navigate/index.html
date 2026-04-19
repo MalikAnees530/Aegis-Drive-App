@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <title>Aegis Edge Navigation</title>
+    <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+    <link href="style.css" rel="stylesheet" />
+</head>
+<body class="state-1">
+    <div id="map"></div>
+    
+    <!-- 🚀 FLOATING SEARCH COMMAND CENTER -->
+    <div id="searchContainer">
+        <div class="glass-card search-card">
+            <button class="icon-btn-voice" id="btnVoice">🎙️</button>
+            <input type="search" id="etSearch" placeholder="Search buildings, sectors, streets..." autocomplete="off">
+            <button class="icon-btn-plain" id="btnSearchSubmit">🔍</button>
+        </div>
+        <div id="suggestions" class="suggestions-list hidden"></div>
+    </div>
+
+    <!-- 🚀 NOTIFICATION ENGINE -->
+    <div id="customToast" class="custom-toast hidden">Notification</div>
+    
+    <!-- 🚀 ROUTING & ACTION CARD -->
+    <div class="glass-card routing-card top-right hidden" id="routingCard">
+        <div class="route-details">
+            <span id="navStreet">Destination</span>
+            <div class="time-dist">
+                <span id="navTime">-- min</span>
+                <span id="navDistance">-- km</span>
+            </div>
+            <div class="route-actions">
+                <button id="btnStartDrive" class="btn-action primary">🚀 START DRIVE</button>
+                <button id="btnCancelDrive" class="btn-action danger">✖ STOP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚀 RECENTER FAB -->
+    <button id="btnRecenter" class="fab-recenter">📍</button>
+
+    <script src="app.js"></script>
+</body>
+</html>

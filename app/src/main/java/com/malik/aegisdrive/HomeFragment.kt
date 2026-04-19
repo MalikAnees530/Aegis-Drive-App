@@ -25,6 +25,18 @@ import java.util.Locale
 @SuppressLint("SetTextI18n", "CommitPrefEdits")
 class HomeFragment : Fragment() {
 
+    private val sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+        if (isAdded && view != null) {
+            // 🚀 SYNC: Listen for real-time score or session-end triggers
+            val keysToWatch = listOf("LAST_SCORE", "TOTAL_ALERTS", "DRIVE_SECONDS", "TOTAL_SESSIONS")
+            if (keysToWatch.contains(key)) {
+                activity?.runOnUiThread {
+                    view?.let { syncDashboardData(it) }
+                }
+            }
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -37,6 +49,16 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupClickListeners(view)
         checkAIModelStatus(view)
+        
+        // 🚀 ACTIVATE REAL-TIME SYNC
+        requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(sharedPrefsListener)
     }
 
     override fun onResume() {
@@ -57,10 +79,8 @@ class HomeFragment : Fragment() {
             else -> "Good Night"
         }
         
-        // 🚀 SYNC: Load user name for greeting
         val prefs = requireActivity().getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
         val userName = prefs.getString("user_name", "Driver")?.split(" ")?.get(0) ?: "Driver"
-        
         tvGreeting?.text = "$greetingTime, $userName"
     }
 
@@ -95,41 +115,43 @@ class HomeFragment : Fragment() {
         val driveSeconds = prefs.getInt("DRIVE_SECONDS", 0)
         val lastDriveDate = prefs.getString("LAST_DRIVE_DATE", "No recent sessions") ?: "No recent sessions"
         val totalSessions = prefs.getInt("TOTAL_SESSIONS", 0)
+        
+        // 🚀 SYNC: Distinct Logic for Safety vs Focus
+        val totalScoreSum = prefs.getInt("TOTAL_SCORE_SUM", 0)
+        val lifetimeSafetyAvg = if (totalSessions > 0) totalScoreSum.toDouble() / totalSessions else 100.0
 
-        // 🚀 CLOUD RECOVERY: If local sessions are 0, check the cloud
+        // 🚀 CLOUD RECOVERY: Only if local is empty
         if (totalSessions == 0) {
             fetchLatestFromCloud(view)
+        } else {
+            updateUIComponents(view, lastScore, totalAlerts, driveSeconds, lastDriveDate, totalSessions, lifetimeSafetyAvg)
         }
-
-        updateUIComponents(view, lastScore, totalAlerts, driveSeconds, lastDriveDate, totalSessions)
     }
 
-    private fun updateUIComponents(view: View, score: Int, alerts: Int, seconds: Int, date: String, sessionCount: Int) {
+    private fun updateUIComponents(view: View, score: Int, alerts: Int, seconds: Int, date: String, sessionCount: Int, lifetimeSafety: Double) {
         val hours = seconds / 3600
         val mins = (seconds % 3600) / 60
         val secs = seconds % 60
         val formattedTime = if (hours > 0) "${hours}h ${mins}m" else "${mins}m ${secs}s"
 
+        // Last Session Results
         view.findViewById<TextView>(R.id.tvScoreValue)?.text = score.toString()
         view.findViewById<TextView>(R.id.tvDriveTimeValue)?.text = formattedTime
         view.findViewById<TextView>(R.id.tvAlertsValue)?.text = alerts.toString()
         
-        // 🚀 PERFECT FOCUS LOGIC: Synchronized average of AI Score and Alert Performance
-        val alertPenalty = alerts * 4
-        val focusLevel = if (seconds > 0) {
-            ((score + maxOf(0, 100 - alertPenalty)) / 2).coerceIn(0, 100)
-        } else {
-            100
-        }
+        // 🚀 LOGIC 1: Est. Focus Level (Current/Last Session Performance)
+        val baseFocus = score.coerceIn(0, 100)
+        val penalty = (alerts * 4).coerceIn(0, 50)
+        val focusLevel = (baseFocus - penalty).coerceIn(0, 100)
         view.findViewById<TextView>(R.id.tvFocusValue)?.text = "$focusLevel%"
 
-        val safetyRating = (score / 100.0) * 5.0
-        view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f", safetyRating)
+        // 🚀 LOGIC 2: Safety % (Lifetime Average Reliability)
+        view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f%%", lifetimeSafety)
 
         val tvHistoryTitle = view.findViewById<TextView>(R.id.tvHistoryTitle)
         val tvHistoryDate = view.findViewById<TextView>(R.id.tvHistoryDate)
         if (sessionCount > 0) {
-            tvHistoryTitle?.text = "Session $sessionCount: ${String.format(Locale.US, "%.1f", safetyRating)} ⭐"
+            tvHistoryTitle?.text = "Session $sessionCount: ${String.format(Locale.US, "%.1f%%", score.toDouble())}"
             tvHistoryDate?.text = date
         }
 
@@ -149,7 +171,6 @@ class HomeFragment : Fragment() {
         tvStatus?.setTextColor(parsedColor)
         view.findViewById<View>(R.id.statusIndicator)?.backgroundTintList = ColorStateList.valueOf(parsedColor)
 
-        // 🚀 DYNAMIC DRIVING LEVEL: Professional range detection for all scores
         val tvScoreSub = view.findViewById<TextView>(R.id.tvScoreSub)
         tvScoreSub?.text = when {
             score >= 90 -> "Elite Driving Level Detected."
@@ -177,7 +198,6 @@ class HomeFragment : Fragment() {
                     val date = doc.getString("timestamp") ?: "Recent Drive"
                     val num = doc.getLong("sessionNumber")?.toInt() ?: 1
 
-                    // 🚀 SYNC: Save to local storage for offline consistency
                     val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
                     prefs.edit().apply {
                         putInt("LAST_SCORE", score)
@@ -187,8 +207,7 @@ class HomeFragment : Fragment() {
                         putInt("TOTAL_SESSIONS", num)
                         apply()
                     }
-
-                    updateUIComponents(view, score, alerts, duration, date, num)
+                    updateUIComponents(view, score, alerts, duration, date, num, score.toDouble())
                 }
             }
     }
@@ -198,20 +217,17 @@ class HomeFragment : Fragment() {
             val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottomNavigationView)
             bottomNav?.selectedItemId = R.id.monitorFragment
         }
-
         view.findViewById<MaterialCardView>(R.id.btnSettings)?.setOnClickListener {
             try { startActivity(Intent(requireContext(), SettingsActivity::class.java)) }
             catch (_: Exception) { Toast.makeText(requireContext(), "Opening Settings...", Toast.LENGTH_SHORT).show() }
         }
-
         view.findViewById<MaterialCardView>(R.id.btnNotif)?.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Aegis Security Logs")
-                .setMessage("✔ Core AI Active\n✔ Cloud Sync Live\n✔ All Systems Nominal")
+                .setMessage("✔ Core AI Active\n✔ Cloud Sync Live\n✔ All System Works Properly")
                 .setPositiveButton("OK") { d, _ -> d.dismiss() }
                 .show()
         }
-
         view.findViewById<TextView>(R.id.btnViewAllSessions)?.setOnClickListener {
             startActivity(Intent(requireContext(), SessionHistoryActivity::class.java))
         }

@@ -201,15 +201,24 @@ class MonitorFragment : Fragment() {
         }
     }
 
+    private var lastVibrationTime = 0L
+
     private fun playAudioAlarm() {
-        val prefs = requireActivity().getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+        val activity = activity ?: return
+        if (!isAdded) return
+        
+        val prefs = activity.getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
         val soundEnabled = prefs.getBoolean("alert_sound", true)
         val vibrationEnabled = prefs.getBoolean("vibration", true)
 
         if (vibrationEnabled) {
-            val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
-            if (vibrator.hasVibrator()) {
-                vibrator.vibrate(android.os.VibrationEffect.createOneShot(500, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastVibrationTime > 1500) { // Vibrate every 1.5s during danger
+                val vibrator = activity.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+                if (vibrator.hasVibrator()) {
+                    vibrator.vibrate(android.os.VibrationEffect.createOneShot(800, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    lastVibrationTime = currentTime
+                }
             }
         }
 
@@ -371,8 +380,11 @@ class MonitorFragment : Fragment() {
             tvLiveMar.text = "MAR: 0.00"
             tvFPS.text = "0 FPS"
             tvTimer.text = "00:00:00"
-            safetyScore = 100f
-            updateSafetyUI()
+            // 🚀 SENIOR FIX: Do NOT reset the persistent safetyScore here.
+            // Only update the local UI, let the last session score persist in SharedPreferences.
+            val scoreInt = safetyScore.toInt()
+            tvSafetyScore.text = "$scoreInt%"
+            pbSafetyScore.progress = scoreInt
         }
     }
 
@@ -594,6 +606,15 @@ class MonitorFragment : Fragment() {
                 tvDrowsiness.setTextColor("#FFB74D".toColorInt())
                 setStatus("● WARNING", "#FFB74D")
                 safetyScore = maxOf(0f, safetyScore - 0.5f)
+                
+                // 🚀 Subtle Haptic for Early Fatigue
+                val prefs = requireActivity().getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+                if (prefs.getBoolean("vibration", true)) {
+                    val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
+                    if (vibrator.hasVibrator()) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    }
+                }
             }
         }
         updateSafetyUI()
@@ -605,6 +626,12 @@ class MonitorFragment : Fragment() {
         tvSafetyScore.text = "$scoreInt%"
         pbSafetyScore.progress = scoreInt
         
+        // 🚀 REAL-TIME SYNC: Update shared state for other fragments
+        try {
+            val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            prefs.edit().putInt("LAST_SCORE", scoreInt).apply()
+        } catch (e: Exception) { }
+
         val color = when {
             safetyScore > 75 -> "#6ABF69"
             safetyScore > 45 -> "#FFB74D"

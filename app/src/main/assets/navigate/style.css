@@ -1,0 +1,73 @@
+body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif; overflow: hidden; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+.hidden { display: none !important; }
+
+/* 🚀 Glassmorphism UI */
+.glass-card {
+    position: absolute; background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px); border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px; color: white; z-index: 400;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+/* 🚀 Search Center Alignment */
+#searchContainer {
+    position: absolute; top: 20px; left: 16px; right: 16px;
+    max-width: 520px; z-index: 500;
+}
+.search-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+#etSearch {
+    flex: 1; background: transparent; border: none; color: white;
+    font-size: 16px; font-weight: 700; outline: none;
+}
+.icon-btn-plain { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #38BDF8; }
+.icon-btn-voice { 
+    background: #38BDF8; border: none; border-radius: 50%;
+    width: 42px; height: 42px; color: #0F172A; font-size: 18px; cursor: pointer;
+}
+
+/* 🚀 SOLID BLACK PROFESSIONAL SUGGESTION BOX */
+.suggestions-list {
+    background: #000000; border-radius: 18px; margin-top: 10px; 
+    border: 2px solid #38BDF8; max-height: 300px; overflow-y: auto;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.8);
+}
+.suggestion-item {
+    padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 15px; color: #FFFFFF; font-weight: 600; cursor: pointer;
+}
+.suggestion-item:active { background: #38BDF8; color: #000; }
+
+/* 🚀 Routing Card */
+.routing-card { position: absolute; top: 100px; right: 16px; width: 220px; padding: 18px; }
+.time-dist { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+#navTime { color: #38BDF8; font-weight: 900; font-size: 24px; }
+#navDistance { opacity: 0.7; font-size: 14px; font-weight: 700; }
+
+.route-actions { display: flex; flex-direction: column; gap: 8px; }
+.btn-action { width: 100%; padding: 14px; border-radius: 12px; font-weight: 900; font-size: 12px; border: none; cursor: pointer; }
+.btn-action.primary { background: linear-gradient(135deg, #38BDF8, #0EA5E9); color: #0F172A; }
+.btn-action.danger { background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1.5px solid #EF4444; }
+
+/* FABs */
+.fab-recenter {
+    position: absolute; bottom: 32px; right: 16px; width: 56px; height: 56px;
+    border-radius: 28px; border: none; background: #38BDF8; color: #0F172A;
+    font-size: 24px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(56,189,248,0.4); cursor: pointer; z-index: 500;
+}
+
+/* Custom Toast */
+.custom-toast {
+    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+    background: #1E293B; color: white; padding: 12px 24px; border-radius: 30px;
+    font-size: 14px; font-weight: 700; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    opacity: 0; transition: 0.3s;
+}
+.marker-bubble {
+    background: #0F172A; color: white; padding: 6px 12px; border-radius: 12px;
+    border: 2px solid #38BDF8; font-size: 11px; font-weight: 900;
+}
+
+/* Cleanup */
+.maplibregl-ctrl-attrib, .maplibregl-ctrl-logo { display: none !important; }
