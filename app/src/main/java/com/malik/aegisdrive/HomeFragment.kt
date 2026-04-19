@@ -219,7 +219,7 @@ class HomeFragment : Fragment() {
         }
         view.findViewById<MaterialCardView>(R.id.btnSettings)?.setOnClickListener {
             try { startActivity(Intent(requireContext(), SettingsActivity::class.java)) }
-            catch (_: Exception) { Toast.makeText(requireContext(), "Opening Settings...", Toast.LENGTH_SHORT).show() }
+            catch (_: Exception) { AegisNotify.show(requireContext(), "Opening Settings...", AegisNotify.Type.INFO) }
         }
         view.findViewById<MaterialCardView>(R.id.btnNotif)?.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())

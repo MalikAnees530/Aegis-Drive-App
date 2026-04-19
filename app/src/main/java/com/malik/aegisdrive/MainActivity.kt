@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
         val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
 
         if (!cameraGranted || !locationGranted || !audioGranted) {
-            Toast.makeText(this, "All permissions are required for full safety features.", Toast.LENGTH_LONG).show()
+            AegisNotify.show(this, "All permissions are required for full safety features.", AegisNotify.Type.WARNING)
         }
     }
 

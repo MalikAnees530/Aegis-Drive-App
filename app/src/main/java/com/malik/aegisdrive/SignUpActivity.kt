@@ -84,7 +84,7 @@ class SignUpActivity : AppCompatActivity() {
             }
 
             if (!cbTerms.isChecked) {
-                Toast.makeText(this, "Please agree to the Terms and Conditions", Toast.LENGTH_SHORT).show()
+                AegisNotify.show(this, "Please agree to the Terms and Conditions", AegisNotify.Type.WARNING)
                 isValid = false
             }
 
@@ -95,7 +95,7 @@ class SignUpActivity : AppCompatActivity() {
                 // Simulate network delay
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     loadingDialog?.dismiss()
-                    Toast.makeText(this, "Account created successfully!", Toast.LENGTH_SHORT).show()
+                    AegisNotify.show(this, "Account created successfully!", AegisNotify.Type.SUCCESS)
                     val intent = Intent(this, LoginActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)

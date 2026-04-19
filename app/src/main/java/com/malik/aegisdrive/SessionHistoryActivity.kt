@@ -49,7 +49,7 @@ class SessionHistoryActivity : AppCompatActivity() {
             }
             .addOnFailureListener {
                 progressBar?.visibility = View.GONE
-                Toast.makeText(this, "Cloud Sync Failed", Toast.LENGTH_SHORT).show()
+                AegisNotify.show(this, "Cloud Sync Failed", AegisNotify.Type.ERROR)
             }
     }
 

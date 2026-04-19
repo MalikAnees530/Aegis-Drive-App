@@ -218,7 +218,7 @@ class ChatFragment : Fragment() {
         if (currentSession == session) startNewChat()
         saveSessions()
         renderSessionList()
-        Toast.makeText(requireContext(), "Session deleted", Toast.LENGTH_SHORT).show()
+        AegisNotify.show(requireContext(), "Session deleted", AegisNotify.Type.SUCCESS)
     }
 
     private fun deleteAllSessions() {
@@ -226,7 +226,7 @@ class ChatFragment : Fragment() {
         startNewChat()
         saveSessions()
         renderSessionList()
-        Toast.makeText(requireContext(), "All history cleared", Toast.LENGTH_SHORT).show()
+        AegisNotify.show(requireContext(), "All history cleared", AegisNotify.Type.SUCCESS)
     }
 
     private fun saveSessions() {
@@ -416,12 +416,12 @@ class ChatFragment : Fragment() {
                     if (!matches.isNullOrEmpty()) sendMessage(matches[0])
                     stopListening()
                 }
-                override fun onReadyForSpeech(p0: Bundle?) { Toast.makeText(context, "Listening...", Toast.LENGTH_SHORT).show() }
+                override fun onReadyForSpeech(p0: Bundle?) { AegisNotify.show(requireContext(), "Listening...", AegisNotify.Type.SPEECH) }
                 override fun onBeginningOfSpeech() {}
                 override fun onRmsChanged(p0: Float) {}
                 override fun onBufferReceived(p0: ByteArray?) {}
                 override fun onEndOfSpeech() { stopListening() }
-                override fun onError(p0: Int) { stopListening(); Toast.makeText(context, "Try speaking again.", Toast.LENGTH_SHORT).show() }
+                override fun onError(p0: Int) { stopListening(); AegisNotify.show(requireContext(), "Try speaking again.", AegisNotify.Type.ERROR) }
                 override fun onPartialResults(p0: Bundle?) {}
                 override fun onEvent(p0: Int, p1: Bundle?) {}
             })

@@ -89,7 +89,7 @@ class EditProfileActivity : AppCompatActivity() {
     private fun saveProfile() {
         val newName = etName.text.toString().trim()
         if (newName.isEmpty()) {
-            Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show()
+            AegisNotify.show(this, "Name cannot be empty", AegisNotify.Type.WARNING)
             return
         }
 
@@ -103,7 +103,7 @@ class EditProfileActivity : AppCompatActivity() {
             apply()
         }
 
-        Toast.makeText(this, "Profile Saved Successfully", Toast.LENGTH_SHORT).show()
+        AegisNotify.show(this, "Profile Saved Successfully", AegisNotify.Type.SUCCESS)
         finish()
     }
 

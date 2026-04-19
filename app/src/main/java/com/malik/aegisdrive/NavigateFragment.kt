@@ -184,7 +184,14 @@ class NavigateFragment : Fragment(), LocationListener {
 
     inner class WebAppInterface(private val mContext: Context) {
         @JavascriptInterface
-        fun showToast(toast: String) { handler.post { Toast.makeText(mContext, toast, Toast.LENGTH_SHORT).show() } }
+        fun showToast(toast: String) { 
+            handler.post { 
+                val type = if (toast.contains("Success", true) || toast.contains("Saved", true)) AegisNotify.Type.SUCCESS 
+                           else if (toast.contains("Failed", true) || toast.contains("Error", true)) AegisNotify.Type.ERROR
+                           else AegisNotify.Type.INFO
+                AegisNotify.show(mContext, toast, type) 
+            } 
+        }
 
         @JavascriptInterface
         fun startVoiceRecognition() {
@@ -202,9 +209,9 @@ class NavigateFragment : Fragment(), LocationListener {
                         putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak destination...")
                     }
                     speechRecognizer?.startListening(intent)
-                    Toast.makeText(mContext, "Listening...", Toast.LENGTH_SHORT).show()
+                    AegisNotify.show(mContext, "Listening...", AegisNotify.Type.SPEECH)
                 } catch (e: Exception) {
-                    Toast.makeText(mContext, "Speech recognizer failed", Toast.LENGTH_SHORT).show()
+                    AegisNotify.show(mContext, "Speech recognizer failed", AegisNotify.Type.ERROR)
                 }
             }
         }
@@ -229,7 +236,7 @@ class NavigateFragment : Fragment(), LocationListener {
                     webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], 'Home');", null)
                 }
             } else {
-                handler.post { Toast.makeText(mContext, "Please set your Home location first.", Toast.LENGTH_SHORT).show() }
+                handler.post { AegisNotify.show(mContext, "Please set your Home location first.", AegisNotify.Type.WARNING) }
             }
         }
     }

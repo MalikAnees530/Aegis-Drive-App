@@ -287,9 +287,24 @@ document.getElementById('btnRecenter').onclick = () => map.flyTo({ center: curre
 document.getElementById('btnVoice').onclick = () => { if (window.Android) window.Android.startVoiceRecognition(); };
 
 function showCustomToast(msg) {
-    const t = document.getElementById('customToast'); t.innerText = msg;
-    t.classList.remove('hidden'); t.style.opacity = '1';
-    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.classList.add('hidden'), 300); }, 2500);
+    const t = document.getElementById('customToast');
+    let icon = "🛡️"; // Default Aegis Icon
+    if (msg.includes("Saved") || msg.includes("Successfully")) icon = "✅";
+    if (msg.includes("found") || msg.includes("failed")) icon = "❌";
+    if (msg.includes("Pinpointing")) icon = "🔍";
+    if (msg.includes("Click")) icon = "📍";
+
+    t.innerHTML = `<span class="toast-icon">${icon}</span> <span>${msg}</span>`;
+    t.classList.remove('hidden');
+    // Add small delay to ensure class is removed before adding visible for animation
+    setTimeout(() => {
+        t.classList.add('visible');
+    }, 10);
+
+    setTimeout(() => {
+        t.classList.remove('visible');
+        setTimeout(() => t.classList.add('hidden'), 400);
+    }, 3000);
 }
 
 function clearPOIs() { poiMarkers.forEach(m => m.remove()); poiMarkers = []; }

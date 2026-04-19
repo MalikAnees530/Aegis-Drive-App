@@ -94,13 +94,22 @@ body { margin: 0; padding: 0; background: #000; font-family: 'Inter', sans-serif
     box-shadow: 0 6px 20px rgba(56,189,248,0.4); cursor: pointer; z-index: 500;
 }
 
-/* Custom Toast */
+/* Modern Custom Toast with Icons */
 .custom-toast {
-    position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
-    background: #1E293B; color: white; padding: 12px 24px; border-radius: 30px;
-    font-size: 14px; font-weight: 700; z-index: 1000; box-shadow: 0 5px 20px rgba(0,0,0,0.4);
-    opacity: 0; transition: 0.3s;
+    position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95); color: white; padding: 10px 24px; border-radius: 30px;
+    font-size: 14px; font-weight: 700; z-index: 2000; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    border: 1.5px solid rgba(56, 189, 248, 0.4);
+    opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex; align-items: center; gap: 12px;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(20px);
 }
+.custom-toast.visible {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+}
+.toast-icon { font-size: 18px; }
 .marker-bubble {
     background: #0F172A; color: white; padding: 6px 12px; border-radius: 12px;
     border: 2px solid #38BDF8; font-size: 11px; font-weight: 900;

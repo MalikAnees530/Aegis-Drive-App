@@ -137,7 +137,7 @@ class SettingsActivity : AppCompatActivity() {
                 .setNeutralButton("RESET STATS") { _, _ ->
                     getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
                     loadUserData()
-                    Toast.makeText(this, "Statistics Reset Successfully", Toast.LENGTH_SHORT).show()
+                    AegisNotify.show(this, "Statistics Reset Successfully", AegisNotify.Type.SUCCESS)
                 }
                 .show()
         }
