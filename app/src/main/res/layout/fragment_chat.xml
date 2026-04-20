@@ -7,12 +7,11 @@
     android:layout_height="match_parent"
     android:background="@color/bg_deepest">
 
-    <!-- MAIN CHAT CONTENT -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- 🚀 LEAD UI/UX: PREMIUM AEGIS HEADER -->
+        <!-- 🚀 PREMIUM AEGIS HEADER -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/chatHeader"
             android:layout_width="match_parent"
@@ -74,8 +73,7 @@
                             android:text="Aegis Intelligence"
                             android:textColor="@color/text_primary"
                             android:textSize="17sp"
-                            android:fontFamily="sans-serif-black"
-                            android:letterSpacing="0.02"/>
+                            android:fontFamily="sans-serif-black"/>
                         <TextView
                             android:id="@+id/tvSafetyMirror"
                             android:layout_width="wrap_content"
@@ -127,83 +125,73 @@
                 android:paddingTop="12dp"/>
         </ScrollView>
 
-        <!-- 🚀 LEAD UI/UX: AUDIO CONTROL PANEL -->
+        <!-- 🚀 LEAD UI/UX: PERSISTENT AUDIO ACTION ORBS (ALWAYS VISIBLE) -->
         <LinearLayout
             android:id="@+id/audioControlPanel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="12dp"
-            android:visibility="gone"
+            android:layout_marginBottom="16dp"
+            android:visibility="visible"
             app:layout_constraintBottom_toTopOf="@id/quickChipsRow"
             app:layout_constraintEnd_toEndOf="@id/chatInputBar">
 
-            <!-- Manual Speak Button -->
+            <!-- Premium Modern Deactivate Mic Orb -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/btnPlaySpeak"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:id="@+id/btnDeactivateMic"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_marginEnd="14dp"
+                android:visibility="gone"
                 app:cardBackgroundColor="@color/bg_surface"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
-                app:strokeColor="@color/accent_primary"
-                app:strokeWidth="1dp">
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="8dp"
-                    android:gravity="center">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="🔊"
-                        android:textSize="12sp"
-                        android:layout_marginEnd="8dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="SPEAK ANSWER"
-                        android:textColor="@color/accent_primary"
-                        android:textSize="10sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
+                app:cardCornerRadius="27dp"
+                app:cardElevation="8dp"
+                app:strokeColor="@color/status_danger"
+                app:strokeWidth="2dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_mic_off_modern"
+                    app:tint="@color/status_danger"/>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Stop Speak Button -->
+            <!-- Premium Modern Speak Orb -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnPlaySpeak"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_marginEnd="14dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="27dp"
+                app:cardElevation="8dp"
+                app:strokeColor="@color/accent_primary"
+                app:strokeWidth="2dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_speaker_ai"
+                    app:tint="@color/accent_primary"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Premium Modern Stop/Control Orb -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnStopSpeak"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:visibility="gone"
                 app:cardBackgroundColor="@color/bg_surface"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="4dp"
+                app:cardCornerRadius="27dp"
+                app:cardElevation="8dp"
                 app:strokeColor="@color/status_danger"
-                app:strokeWidth="1dp">
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingHorizontal="14dp"
-                    android:paddingVertical="8dp"
-                    android:gravity="center">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⏹"
-                        android:textColor="@color/status_danger"
-                        android:textSize="12sp"
-                        android:layout_marginEnd="8dp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="STOP"
-                        android:textColor="@color/status_danger"
-                        android:textSize="10sp"
-                        android:textStyle="bold"/>
-                </LinearLayout>
+                app:strokeWidth="2dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_stop_modern"
+                    app:tint="@color/status_danger"/>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
@@ -327,7 +315,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 🚀 LEAD UI/UX: ALL SESSIONS MENU WITH PREMIUM BORDERS -->
+    <!-- 🚀 SIDE MENU: ALL SESSIONS -->
     <com.google.android.material.navigation.NavigationView
         android:layout_width="300dp"
         android:layout_height="match_parent"

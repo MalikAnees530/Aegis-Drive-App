@@ -12,6 +12,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
+import android.speech.tts.Voice
 import android.text.Html
 import android.text.method.LinkMovementMethod
 import android.util.TypedValue
@@ -20,16 +21,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -41,8 +40,8 @@ data class ChatSession(val id: String, var name: String, val messages: MutableLi
 
 class ChatFragment : Fragment() {
 
-    private val groqApiKey = "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"
-    private val groqUrl = "https://api.groq.com/openai/v1/chat/completions"
+    private val GROQ_API_KEY = "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"
+    private val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var chatMessagesContainer: LinearLayout
@@ -53,21 +52,27 @@ class ChatFragment : Fragment() {
     private lateinit var audioControlPanel: View
     private lateinit var btnStopSpeak: View
     private lateinit var btnPlaySpeak: View
+    private lateinit var btnDeactivateMic: View
+    private lateinit var btnMic: MaterialCardView
     private lateinit var ivMicIcon: ImageView
     
     private var speechRecognizer: SpeechRecognizer? = null
     private var tts: TextToSpeech? = null
     private var isListening = false
-    private var isContinuousListening = false
+    private var isVoiceMode = false
     private var ttsReady = false
+    private var isTtsSpeaking = false
     private var lastAiResponse = ""
 
     private var currentSession: ChatSession = ChatSession(UUID.randomUUID().toString(), "New Chat", mutableListOf())
     private var allSessions = mutableListOf<ChatSession>()
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) startListening()
-        else AegisNotify.show(requireContext(), "Permission Denied", AegisNotify.Type.ERROR)
+        if (isGranted) {
+            isVoiceMode = true
+            startListening()
+        }
+        else AegisNotify.show(requireContext(), "Permission denied.", AegisNotify.Type.ERROR)
     }
 
     private val sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -89,27 +94,28 @@ class ChatFragment : Fragment() {
             .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
 
         if (currentSession.messages.isEmpty()) {
-            addAiMessage("Systems online. I am Aegis AI, your automotive intelligence observer created by Malik Anees Ahmed. Standing by for instructions.")
+            addAiMessage("Aegis Intelligence online. Developed by Malik Anees Ahmed. Standing by for telemetry.")
         } else {
             renderCurrentSession()
         }
 
         view.findViewById<MaterialCardView>(R.id.btnSend).setOnClickListener { handleSend() }
-        view.findViewById<MaterialCardView>(R.id.btnMic).setOnClickListener { handleMicClick() }
+        btnMic.setOnClickListener { handleMicClick() }
         view.findViewById<MaterialCardView>(R.id.btnMenu).setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
         view.findViewById<MaterialCardView>(R.id.btnNewChat).setOnClickListener { startNewChat() }
         view.findViewById<View>(R.id.btnDeleteAllSessions).setOnClickListener { deleteAllSessions() }
         
         btnStopSpeak.setOnClickListener { 
-            stopListening()
-            isContinuousListening = false
-            tts?.stop()
-            btnStopSpeak.visibility = View.GONE 
+            stopSpeaking()
         }
         btnPlaySpeak.setOnClickListener { speak(lastAiResponse) }
+        btnDeactivateMic.setOnClickListener { 
+            deactivateVoiceMode()
+        }
 
         setupChips(view)
         renderSessionList()
+        updateAudioButtonsVisibility()
     }
 
     private fun bindViews(view: View) {
@@ -122,11 +128,34 @@ class ChatFragment : Fragment() {
         audioControlPanel = view.findViewById(R.id.audioControlPanel)
         btnStopSpeak = view.findViewById(R.id.btnStopSpeak)
         btnPlaySpeak = view.findViewById(R.id.btnPlaySpeak)
+        btnDeactivateMic = view.findViewById(R.id.btnDeactivateMic)
+        btnMic = view.findViewById(R.id.btnMic)
         ivMicIcon = view.findViewById(R.id.ivMicIcon)
     }
 
+    private fun updateAudioButtonsVisibility() {
+        activity?.runOnUiThread {
+            val shouldShowPanel = isVoiceMode || isTtsSpeaking || lastAiResponse.isNotEmpty()
+            audioControlPanel.visibility = if (shouldShowPanel) View.VISIBLE else View.GONE
+            
+            btnDeactivateMic.visibility = if (isVoiceMode) View.VISIBLE else View.GONE
+            btnStopSpeak.visibility = if (isTtsSpeaking) View.VISIBLE else View.GONE
+            btnPlaySpeak.visibility = if (!isTtsSpeaking && lastAiResponse.isNotEmpty()) View.VISIBLE else View.GONE
+
+            if (isVoiceMode) {
+                btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent_primary))
+                ivMicIcon.setImageResource(if (isListening) R.drawable.ic_check_circle else R.drawable.ic_mic)
+                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.bg_deepest))
+            } else {
+                btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.bg_elevated))
+                ivMicIcon.setImageResource(R.drawable.ic_mic)
+                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_primary))
+            }
+        }
+    }
+
     private fun setupChips(view: View) {
-        view.findViewById<View>(R.id.chipSafety).setOnClickListener { sendMessage("Run diagnostic on current safety standing.") }
+        view.findViewById<View>(R.id.chipSafety).setOnClickListener { sendMessage("Diagnostics: current safety standing.") }
         view.findViewById<View>(R.id.chipHome).setOnClickListener { navigateHome() }
     }
 
@@ -142,7 +171,7 @@ class ChatFragment : Fragment() {
     private fun handleSend() {
         val text = etChatInput.text.toString().trim()
         if (text.isNotEmpty()) {
-            isContinuousListening = false
+            if (isVoiceMode) deactivateVoiceMode()
             sendMessage(text)
             etChatInput.setText("")
         }
@@ -158,7 +187,11 @@ class ChatFragment : Fragment() {
         val typing = addTypingIndicator()
         currentSession.messages.add(Pair("user", text))
         
-        CoroutineScope(Dispatchers.IO).launch {
+        if (fromVoice || isVoiceMode) {
+            AegisNotify.show(requireContext(), "Aegis is thinking...", AegisNotify.Type.INFO)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val response = callGroqAPI(text)
             withContext(Dispatchers.Main) {
                 chatMessagesContainer.removeView(typing)
@@ -166,22 +199,18 @@ class ChatFragment : Fragment() {
                 addAiMessage(response)
                 currentSession.messages.add(Pair("assistant", response))
                 saveSessions()
-                audioControlPanel.visibility = View.VISIBLE
-                
-                if (fromVoice) {
-                    speak(response)
-                    btnStopSpeak.visibility = View.VISIBLE
-                }
+                updateAudioButtonsVisibility()
+                if (fromVoice || isVoiceMode) speak(response)
             }
         }
     }
 
     private fun startNewChat() {
-        currentSession = ChatSession(UUID.randomUUID().toString(), "New Intel Session", mutableListOf())
+        currentSession = ChatSession(UUID.randomUUID().toString(), "New Session", mutableListOf())
         chatMessagesContainer.removeAllViews()
         lastAiResponse = ""
-        audioControlPanel.visibility = View.GONE
-        addAiMessage("New analytics session initialized.")
+        addAiMessage("Intelligence reset. Ready.")
+        updateAudioButtonsVisibility()
         drawerLayout.closeDrawer(GravityCompat.START)
     }
 
@@ -189,8 +218,9 @@ class ChatFragment : Fragment() {
         chatMessagesContainer.removeAllViews()
         for (msg in currentSession.messages) {
             if (msg.first == "user") addUserMessage(msg.second, false)
-            else { lastAiResponse = msg.second; addAiMessage(msg.second, false); audioControlPanel.visibility = View.VISIBLE }
+            else { lastAiResponse = msg.second; addAiMessage(msg.second, false) }
         }
+        updateAudioButtonsVisibility()
         scrollToBottom()
     }
 
@@ -200,51 +230,28 @@ class ChatFragment : Fragment() {
             val isSelected = session.id == currentSession.id
             val card = MaterialCardView(requireContext()).apply {
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply { setMargins(0, 0, 0, dpToPx(10)) }
-                radius = dpToPx(16).toFloat()
-                cardElevation = if (isSelected) 4f else 0f
+                radius = dpToPx(16).toFloat(); cardElevation = if (isSelected) 4f else 0f
                 strokeColor = resources.getColor(if (isSelected) R.color.accent_primary else R.color.border_subtle, null)
                 strokeWidth = if (isSelected) dpToPx(2) else dpToPx(1)
                 setCardBackgroundColor(if (isSelected) resources.getColor(R.color.bg_elevated, null) else android.graphics.Color.TRANSPARENT)
             }
-            
             val layout = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(dpToPx(16), dpToPx(12), dpToPx(12), dpToPx(12)) }
             val icon = TextView(requireContext()).apply { text = "🛡️"; textSize = 16f; setPadding(0, 0, dpToPx(14), 0) }
             val tv = TextView(requireContext()).apply { text = session.name; setTextColor(resources.getColor(R.color.text_primary, null)); textSize = 14f; typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
-            
-            val btnOptions = TextView(requireContext()).apply {
-                text = "⋮"
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-                setTextColor(resources.getColor(R.color.text_disabled, null))
-                setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5))
-                setOnClickListener { showSessionMenu(it, session) }
-            }
-
-            layout.addView(icon); layout.addView(tv); layout.addView(btnOptions)
-            card.addView(layout)
+            val btnOpt = TextView(requireContext()).apply { text = "⋮"; setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f); setTextColor(resources.getColor(R.color.text_disabled, null)); setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5)); setOnClickListener { showSessionMenu(it, session) } }
+            layout.addView(icon); layout.addView(tv); layout.addView(btnOpt); card.addView(layout)
             card.setOnClickListener { currentSession = session; renderCurrentSession(); renderSessionList(); drawerLayout.closeDrawer(GravityCompat.START) }
             sessionsContainer.addView(card)
         }
     }
 
-    private fun showSessionMenu(anchor: View, session: ChatSession) {
-        val popup = PopupMenu(requireContext(), anchor)
-        popup.menu.add("Delete Session")
-        popup.setOnMenuItemClickListener {
-            deleteSingleSession(session)
-            true
-        }
-        popup.show()
+    private fun showSessionMenu(v: View, s: ChatSession) {
+        val p = PopupMenu(requireContext(), v); p.menu.add("Delete Chat")
+        p.setOnMenuItemClickListener { allSessions.remove(s); if (currentSession.id == s.id) startNewChat(); saveSessions(); renderSessionList(); true }
+        p.show()
     }
 
-    private fun deleteSingleSession(session: ChatSession) {
-        allSessions.remove(session)
-        if (currentSession.id == session.id) startNewChat()
-        saveSessions()
-        renderSessionList()
-        AegisNotify.show(requireContext(), "Intel session deleted.", AegisNotify.Type.SUCCESS)
-    }
-
-    private fun deleteAllSessions() { allSessions.clear(); startNewChat(); saveSessions(); renderSessionList(); AegisNotify.show(requireContext(), "Telemetry purged.", AegisNotify.Type.SUCCESS) }
+    private fun deleteAllSessions() { allSessions.clear(); startNewChat(); saveSessions(); renderSessionList(); AegisNotify.show(requireContext(), "History wiped.", AegisNotify.Type.SUCCESS) }
 
     private fun saveSessions() {
         val array = JSONArray()
@@ -271,7 +278,7 @@ class ChatFragment : Fragment() {
     private fun navigateHome() {
         val prefs = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE) ?: return
         val lat = prefs.getFloat("HOME_LAT", 0f)
-        if (lat == 0f) addAiMessage("Home coordinates missing. Calibrate in Navigation terminal.")
+        if (lat == 0f) addAiMessage("Home coordinates missing. Configure in Navigation tab.")
         else { addAiMessage("Executing homeward vector. Interfacing with Map..."); startNavigation(lat.toDouble(), prefs.getFloat("HOME_LON", 0f).toDouble(), "Home") }
     }
 
@@ -282,19 +289,16 @@ class ChatFragment : Fragment() {
 
     private fun callGroqAPI(userMsg: String): String {
         return try {
-            val conn = URL(groqUrl).openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"; conn.setRequestProperty("Authorization", "Bearer $groqApiKey"); conn.setRequestProperty("Content-Type", "application/json"); conn.doOutput = true
+            val conn = URL(GROQ_URL).openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"; conn.setRequestProperty("Authorization", "Bearer $GROQ_API_KEY"); conn.setRequestProperty("Content-Type", "application/json"); conn.doOutput = true
             val score = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.getInt("LAST_SCORE", 100) ?: 100
-            
-            val systemPrompt = "You are Aegis AI, a world-class automotive safety intelligence developed by Malik Anees Ahmed. " +
-                    "Your responses MUST be professional and highly structured. Use bold headers, bullet points, and clear sections. " +
-                    "Current Driver Safety: $score%."
-            
-            val body = JSONObject().apply { put("model", "llama-3.3-70b-versatile"); put("messages", JSONArray().apply { put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) }); val history = currentSession.messages.takeLast(6); for (m in history) put(JSONObject().apply { put("role", if (m.first == "user") "user" else "assistant"); put("content", m.second) }); put(JSONObject().apply { put("role", "user"); put("content", userMsg) }) }) }
+            val sysPrompt = "You are Aegis AI, world-class automotive safety intelligence developed by Malik Anees Ahmed. " +
+                    "Your responses MUST be professional and highly structured. Support Urdu and English. Current Safety: $score%."
+            val body = JSONObject().apply { put("model", "llama-3.3-70b-versatile"); put("messages", JSONArray().apply { put(JSONObject().apply { put("role", "system"); put("content", sysPrompt) }); val history = currentSession.messages.takeLast(6); for (m in history) put(JSONObject().apply { put("role", if (m.first == "user") "user" else "assistant"); put("content", m.second) }); put(JSONObject().apply { put("role", "user"); put("content", userMsg) }) }) }
             val writer = OutputStreamWriter(conn.outputStream); writer.write(body.toString()); writer.flush(); writer.close()
             if (conn.responseCode == 200) JSONObject(conn.inputStream.bufferedReader().readText()).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
-            else "Signal interference detected."
-        } catch (e: Exception) { "Interlink failure." }
+            else "Connection unstable. (Code: ${conn.responseCode})"
+        } catch (e: Exception) { "Interlink failure: ${e.message}" }
     }
 
     private fun addUserMessage(text: String, scroll: Boolean = true) {
@@ -315,65 +319,180 @@ class ChatFragment : Fragment() {
     }
 
     private fun addTypingIndicator(): View {
-        val tv = TextView(requireContext()).apply { text = "Analysing telemetry..."; setTextColor(resources.getColor(R.color.text_disabled, null)); setPadding(dpToPx(20), 0, 0, dpToPx(16)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f) }
+        val tv = TextView(requireContext()).apply { text = "Synthesizing intelligence..."; setTextColor(resources.getColor(R.color.text_disabled, null)); setPadding(dpToPx(20), 0, 0, dpToPx(16)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f) }
         chatMessagesContainer.addView(tv); scrollToBottom(); return tv
     }
 
     private fun handleMicClick() {
         val perm = Manifest.permission.RECORD_AUDIO
         if (requireContext().checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) { requestPermissionLauncher.launch(perm); return }
-        if (isListening) { isContinuousListening = false; stopListening() } else { isContinuousListening = true; startListening() }
+        
+        if (isVoiceMode) { 
+            deactivateVoiceMode()
+        } 
+        else { 
+            isVoiceMode = true
+            startListening(showToast = true) 
+        }
     }
 
-    private fun startListening() {
-        try {
-            isListening = true
-            ivMicIcon.setImageResource(R.drawable.ic_check_circle)
-            ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.RED)
-            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext())
-            speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-                override fun onResults(r: Bundle?) {
-                    val matches = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                    if (!matches.isNullOrEmpty()) sendMessage(matches[0], fromVoice = true)
-                    if (isContinuousListening) { Handler(Looper.getMainLooper()).postDelayed({ if (isContinuousListening) startListening() }, 500) } 
-                    else stopListening()
+    private fun startListening(showToast: Boolean = true) {
+        if (!isVoiceMode) return
+        
+        activity?.runOnUiThread {
+            try {
+                // Ensure everything is clean
+                isListening = true
+                if (showToast) {
+                    AegisNotify.show(requireContext(), "AEGIS LISTENING...", AegisNotify.Type.SPEECH)
                 }
-                override fun onReadyForSpeech(p0: Bundle?) { AegisNotify.show(requireContext(), "AI INTELLIGENCE LISTENING...", AegisNotify.Type.SPEECH) }
-                override fun onBeginningOfSpeech() {}
-                override fun onRmsChanged(p0: Float) {}
-                override fun onBufferReceived(p0: ByteArray?) {}
-                override fun onEndOfSpeech() {}
-                override fun onError(p0: Int) { if (isContinuousListening) startListening() else stopListening() }
-                override fun onPartialResults(p0: Bundle?) {}
-                override fun onEvent(p0: Int, p1: Bundle?) {}
-            })
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true) }
-            speechRecognizer?.startListening(intent)
-        } catch (e: Exception) { stopListening() }
+                updateAudioButtonsVisibility()
+                
+                if (speechRecognizer != null) {
+                    speechRecognizer?.cancel()
+                    speechRecognizer?.destroy()
+                    speechRecognizer = null
+                }
+                
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(requireContext().applicationContext)
+                speechRecognizer?.setRecognitionListener(object : RecognitionListener {
+                    override fun onResults(r: Bundle?) {
+                        val matches = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        if (!matches.isNullOrEmpty()) {
+                            val userText = matches[0]
+                            isListening = false
+                            activity?.runOnUiThread { updateAudioButtonsVisibility() }
+                            sendMessage(userText, fromVoice = true)
+                            stopListeningOnly()
+                        } else {
+                            // No speech detected, retry silently if in voice mode
+                            isListening = false
+                            if (isVoiceMode && !isTtsSpeaking) {
+                                Handler(Looper.getMainLooper()).postDelayed({ 
+                                    if (isVoiceMode && !isTtsSpeaking) startListening(showToast = false) 
+                                }, 500)
+                            }
+                        }
+                    }
+                    override fun onReadyForSpeech(p0: Bundle?) {}
+                    override fun onBeginningOfSpeech() {}
+                    override fun onRmsChanged(p0: Float) {}
+                    override fun onBufferReceived(p0: ByteArray?) {}
+                    override fun onEndOfSpeech() {
+                        isListening = false
+                        activity?.runOnUiThread { updateAudioButtonsVisibility() }
+                    }
+                    override fun onError(p0: Int) { 
+                        isListening = false
+                        activity?.runOnUiThread { updateAudioButtonsVisibility() }
+                        
+                        // Error codes like 7 (No match) or 6 (Timeout) are common in silent polling
+                        if (isVoiceMode && !isTtsSpeaking) {
+                            Handler(Looper.getMainLooper()).postDelayed({ 
+                                if (isVoiceMode && !isTtsSpeaking && !isListening) startListening(showToast = false) 
+                            }, 1000)
+                        }
+                    }
+                    override fun onPartialResults(p0: Bundle?) {}
+                    override fun onEvent(p0: Int, p1: Bundle?) {}
+                })
+
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { 
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault().toString())
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                speechRecognizer?.startListening(intent)
+            } catch (e: Exception) { 
+                isListening = false
+                updateAudioButtonsVisibility()
+            }
+        }
     }
 
-    private fun stopListening() { 
+    private fun deactivateVoiceMode() {
+        isVoiceMode = false
         isListening = false
-        ivMicIcon.setImageResource(R.drawable.ic_mic)
-        ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(resources.getColor(R.color.accent_primary, null))
-        activity?.runOnUiThread { speechRecognizer?.stopListening(); speechRecognizer?.destroy(); speechRecognizer = null }
+        stopListeningOnly()
+        stopSpeaking()
+        AegisNotify.show(requireContext(), "VOICE MODE DEACTIVATED", AegisNotify.Type.INFO)
+        updateAudioButtonsVisibility()
+    }
+
+    private fun stopListeningOnly() {
+        activity?.runOnUiThread { 
+            speechRecognizer?.cancel()
+            speechRecognizer?.destroy()
+            speechRecognizer = null 
+            updateAudioButtonsVisibility()
+        }
+    }
+
+    private fun stopSpeaking() {
+        isTtsSpeaking = false
+        tts?.stop()
+        updateAudioButtonsVisibility()
     }
 
     private fun initTTS() { 
         tts = TextToSpeech(requireContext()) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 ttsReady = true
+                val femaleVoice = tts?.voices?.filter { 
+                    (it.name.contains("female", true) || it.toString().contains("female", true)) 
+                    && it.locale.language == "en" 
+                }?.maxByOrNull { it.quality }
+                
+                if (femaleVoice != null) tts?.voice = femaleVoice
+                tts?.setPitch(1.05f)
+                tts?.setSpeechRate(1.0f)
+
                 tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
-                    override fun onStart(uId: String?) { activity?.runOnUiThread { btnStopSpeak.visibility = View.VISIBLE } }
-                    override fun onDone(uId: String?) { activity?.runOnUiThread { btnStopSpeak.visibility = View.GONE } }
-                    override fun onError(uId: String?) { activity?.runOnUiThread { btnStopSpeak.visibility = View.GONE } }
+                    override fun onStart(uId: String?) { 
+                        isTtsSpeaking = true
+                        isListening = false 
+                        activity?.runOnUiThread { updateAudioButtonsVisibility() }
+                    }
+                    override fun onDone(uId: String?) { 
+                        isTtsSpeaking = false
+                        activity?.runOnUiThread { 
+                            updateAudioButtonsVisibility()
+                            if (isVoiceMode) {
+                                Handler(Looper.getMainLooper()).postDelayed({
+                                    if (isVoiceMode) startListening(showToast = true)
+                                }, 600)
+                            }
+                        } 
+                    }
+                    override fun onError(uId: String?) { 
+                        isTtsSpeaking = false
+                        activity?.runOnUiThread { 
+                            updateAudioButtonsVisibility()
+                            if (isVoiceMode) startListening(showToast = true)
+                        }
+                    }
                 })
             }
         }
     }
 
-    private fun speak(t: String) { if (ttsReady) { val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "AI_MSG") }; tts?.speak(t, TextToSpeech.QUEUE_FLUSH, params, "AI_MSG") } }
+    private fun isUrdu(text: String): Boolean = text.any { it in '\u0600'..'\u06FF' || it in '\uFB50'..'\uFDFF' || it in '\uFE70'..'\uFEFF' }
+
+    private fun speak(t: String) { 
+        if (ttsReady && t.isNotEmpty()) {
+            val cleanText = t.replace(Regex("[*#_~`>+]"), "").replace("\n", " ")
+            if (isUrdu(cleanText)) tts?.language = Locale("ur", "PK") else tts?.language = Locale.US
+            val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "AI_MSG") }
+            isTtsSpeaking = true
+            val result = tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, params, "AI_MSG")
+            if (result == TextToSpeech.ERROR) {
+                isTtsSpeaking = false
+                if (isVoiceMode) startListening()
+            }
+            updateAudioButtonsVisibility()
+        }
+    }
     private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(ScrollView.FOCUS_DOWN) } }
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
-    override fun onDestroyView() { super.onDestroyView(); isContinuousListening = false; speechRecognizer?.destroy(); tts?.shutdown(); activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.unregisterOnSharedPreferenceChangeListener(sharedPrefsListener) }
+    override fun onDestroyView() { super.onDestroyView(); isVoiceMode = false; speechRecognizer?.destroy(); tts?.shutdown(); activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.unregisterOnSharedPreferenceChangeListener(sharedPrefsListener) }
 }

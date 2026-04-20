@@ -14,7 +14,10 @@ object AegisNotify {
         SUCCESS, INFO, WARNING, ERROR, SPEECH
     }
 
+    private var activeToast: Toast? = null
+
     fun show(context: Context, message: String, type: Type = Type.INFO) {
+        activeToast?.cancel()
         val inflater = LayoutInflater.from(context)
         val layout = inflater.inflate(R.layout.layout_custom_toast, null)
 
@@ -49,6 +52,7 @@ object AegisNotify {
         with(Toast(context)) {
             duration = Toast.LENGTH_SHORT
             view = layout
+            activeToast = this
             show()
         }
     }
