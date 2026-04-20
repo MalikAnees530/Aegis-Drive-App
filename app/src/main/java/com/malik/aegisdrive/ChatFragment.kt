@@ -106,7 +106,8 @@ class ChatFragment : Fragment() {
         view.findViewById<View>(R.id.btnDeleteAllSessions).setOnClickListener { deleteAllSessions() }
         
         btnStopSpeak.setOnClickListener { 
-            stopSpeaking()
+            if (isVoiceMode) deactivateVoiceMode()
+            else stopSpeaking()
         }
         btnPlaySpeak.setOnClickListener { speak(lastAiResponse) }
         btnDeactivateMic.setOnClickListener { 
