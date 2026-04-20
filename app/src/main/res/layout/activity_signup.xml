@@ -1,376 +1,177 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_deepest"
-    android:fillViewport="true"
-    android:scrollbars="none">
+    android:background="@color/bg_navy"
+    android:fillViewport="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:padding="24dp">
 
-        <!-- DECORATIVE HEADER -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:background="#0D1B26">
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginTop="24dp"
+            android:src="@drawable/ic_aegis_logo"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Corner Accents -->
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="top|start" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="top|start" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="top|end" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="top|end" android:layout_margin="20dp" android:background="@color/accent_primary" />
+        <TextView
+            android:id="@+id/tvHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:text="Create Identity"
+            android:textColor="@color/white"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ivLogo" />
 
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="bottom|start" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="bottom|start" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="bottom|end" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="bottom|end" android:layout_margin="20dp" android:background="@color/accent_dark" />
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Register your credentials with Aegis"
+            android:textColor="@color/slate_text"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvHeader" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:paddingHorizontal="24dp"
-                android:paddingTop="32dp"
-                android:paddingBottom="20dp">
-
-                <!-- Back Navigation -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="24dp">
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/btnBackToLogin"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:layout_marginEnd="12dp"
-                        app:cardBackgroundColor="#1A3D5573"
-                        app:cardCornerRadius="10dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="#2A4558"
-                        app:strokeWidth="1dp">
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="←"
-                            android:textColor="@color/accent_light"
-                            android:textSize="18sp" />
-                    </com.google.android.material.card.MaterialCardView>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Back to Login"
-                        android:textColor="@color/accent_primary"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <!-- Title Section -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-                    <View
-                        android:layout_width="4dp"
-                        android:layout_height="44dp"
-                        android:background="@color/accent_primary"
-                        android:layout_marginEnd="16dp" />
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Create Account"
-                            android:textColor="@color/text_primary"
-                            android:textSize="24sp"
-                            android:textStyle="bold"
-                            android:fontFamily="sans-serif-medium" />
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Join the Aegis driver network"
-                            android:textColor="@color/text_disabled"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-                    <!-- Small Logo Accent -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        app:cardBackgroundColor="#1A3D5573"
-                        app:cardCornerRadius="24dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="@color/accent_primary"
-                        app:strokeWidth="1dp">
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="◉"
-                            android:textColor="@color/accent_primary"
-                            android:textSize="16sp" />
-                    </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>
-            </LinearLayout>
-        </FrameLayout>
-
-        <!-- FORM SECTION -->
-        <LinearLayout
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/nameInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="32dp"
-            android:paddingBottom="48dp">
+            android:layout_marginTop="32dp"
+            android:hint="Full Name"
+            android:textColorHint="@color/slate_text"
+            app:boxBackgroundColor="@color/bg_navy_light"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:hintTextColor="@color/aegis_blue"
+            app:layout_constraintTop_toBottomOf="@+id/tvSubtitle"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="@color/aegis_blue">
 
-            <!-- Step Indicator -->
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFullName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="32dp">
-                <View android:layout_width="32dp" android:layout_height="4dp" android:background="@color/accent_primary" android:layout_marginEnd="6dp" />
-                <View android:layout_width="12dp" android:layout_height="4dp" android:background="@color/bg_surface" android:layout_marginEnd="6dp" />
-                <View android:layout_width="12dp" android:layout_height="4dp" android:background="@color/bg_surface" />
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="end"
-                    android:text="Step 1 of 1"
-                    android:textColor="@color/text_disabled"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:inputType="textPersonName"
+                android:textColor="@color/white" />
 
-            <!-- Full Name -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="FULL NAME"
-                android:textColor="@color/accent_light"
-                android:textSize="11sp"
-                android:letterSpacing="0.18"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/nameInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/emailInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Email Address"
+            android:textColorHint="@color/slate_text"
+            app:boxBackgroundColor="@color/bg_navy_light"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:hintTextColor="@color/aegis_blue"
+            app:layout_constraintTop_toBottomOf="@+id/nameInputLayout"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="@color/aegis_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="22dp"
-                android:hint="Enter your name"
-                app:startIconDrawable="@drawable/ic_person"
-                app:startIconTint="@color/accent_primary">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etFullName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPersonName|textCapWords"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:inputType="textEmailAddress"
+                android:textColor="@color/white" />
 
-            <!-- Email Address -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="EMAIL ADDRESS"
-                android:textColor="@color/accent_light"
-                android:textSize="11sp"
-                android:letterSpacing="0.18"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/emailInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/passwordInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Access Key"
+            android:textColorHint="@color/slate_text"
+            app:boxBackgroundColor="@color/bg_navy_light"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/slate_text"
+            app:hintTextColor="@color/aegis_blue"
+            app:layout_constraintTop_toBottomOf="@+id/emailInputLayout"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/aegis_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="22dp"
-                android:hint="Enter your email"
-                app:startIconDrawable="@drawable/ic_email"
-                app:startIconTint="@color/accent_primary">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etEmail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textEmailAddress"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:inputType="textPassword"
+                android:textColor="@color/white" />
 
-            <!-- Phone Number -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PHONE NUMBER"
-                android:textColor="@color/accent_light"
-                android:textSize="11sp"
-                android:letterSpacing="0.18"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/phoneInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="22dp"
-                android:hint="Enter your phone number"
-                app:startIconDrawable="@drawable/ic_phone"
-                app:startIconTint="@color/accent_primary">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPhone"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="phone"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Password -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="PASSWORD"
-                android:textColor="@color/accent_light"
-                android:textSize="11sp"
-                android:letterSpacing="0.18"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/passwordInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="22dp"
-                android:hint="Enter your password"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/accent_primary"
-                app:passwordToggleEnabled="true"
-                app:passwordToggleTint="@color/accent_primary">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPassword"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSignUp"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="40dp"
+            android:text="INITIALIZE IDENTITY"
+            android:textColor="@color/bg_navy"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/aegis_blue"
+            app:cornerRadius="16dp"
+            app:layout_constraintTop_toBottomOf="@+id/passwordInputLayout" />
 
-            <!-- Confirm Password -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="CONFIRM PASSWORD"
-                android:textColor="@color/accent_light"
-                android:textSize="11sp"
-                android:letterSpacing="0.18"
-                android:textStyle="bold"
-                android:layout_marginBottom="8dp" />
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/confirmPasswordInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp"
-                android:hint="Repeat your password"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/accent_primary"
-                app:passwordToggleEnabled="true"
-                app:passwordToggleTint="@color/accent_primary">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etConfirmPassword"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+        <ProgressBar
+            android:id="@+id/signUpProgressBar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:visibility="gone"
+            android:indeterminateTint="@color/bg_navy"
+            app:layout_constraintBottom_toBottomOf="@+id/btnSignUp"
+            app:layout_constraintEnd_toEndOf="@+id/btnSignUp"
+            app:layout_constraintStart_toStartOf="@+id/btnSignUp"
+            app:layout_constraintTop_toTopOf="@+id/btnSignUp" />
 
-            <!-- Terms and Conditions -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:background="@color/bg_surface"
-                android:padding="16dp"
-                android:layout_marginBottom="36dp">
-                <CheckBox
-                    android:id="@+id/cbTerms"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="12dp"
-                    android:buttonTint="@color/accent_primary" />
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="I agree to the Terms of Service and Privacy Policy"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:lineSpacingMultiplier="1.2" />
-            </LinearLayout>
+        <TextView
+            android:id="@+id/tvGoToLogin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Already have an identity? Sign In"
+            android:textColor="@color/slate_text"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/btnSignUp" />
 
-            <!-- Sign Up Button (Refined) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSignUp"
-                style="@style/AegisDrive.Button.Primary"
-                android:layout_width="match_parent"
-                android:layout_height="58dp"
-                android:text="Create My Account"
-                android:textAllCaps="false"
-                android:letterSpacing="0.05"
-                android:textSize="17sp"
-                app:cornerRadius="14dp"
-                app:icon="@drawable/ic_person"
-                app:iconPadding="12dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Sign In Footer -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginTop="32dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Already have an account? "
-                    android:textColor="@color/text_disabled"
-                    android:textSize="14sp" />
-                <TextView
-                    android:id="@+id/tvGoToLogin"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sign In"
-                    android:textColor="@color/accent_light"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:paddingVertical="8dp"
-                    android:paddingHorizontal="4dp" />
-            </LinearLayout>
-
-            <!-- Version Info -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="36dp"
-                android:text="v1.0.0  ·  Secured by Aegis Intelligence"
-                android:textColor="@color/text_disabled"
-                android:textSize="11sp"
-                android:gravity="center"
-                android:letterSpacing="0.05" />
-
-        </LinearLayout>
-    </LinearLayout>
 </androidx.core.widget.NestedScrollView>

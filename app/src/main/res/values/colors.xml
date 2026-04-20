@@ -1,54 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ============================================ -->
-    <!-- AEGISDRIVE - CLEAN LIGHT PREMIUM PALETTE     -->
-    <!-- ============================================ -->
-
-    <!-- === BACKGROUND COLORS === -->
-    <color name="bg_deepest">#F5F7FA</color>
-    <color name="bg_surface">#FFFFFF</color>
-    <color name="bg_elevated">#F0F3F7</color>
-    <color name="charcoal">#E0E5EC</color>
-
-    <!-- === TEXT COLORS === -->
-    <color name="text_primary">#0F172A</color>
-    <color name="text_secondary">#475569</color>
-    <color name="text_disabled">#94A3B8</color>
-
-    <!-- === ACCENT / ACTION COLORS === -->
-    <color name="accent_primary">#3B82F6</color>
-    <color name="accent_light">#7DD3FC</color>
-    <color name="accent_dark">#0284C7</color>
-
-    <!-- === STATUS / SEMANTIC COLORS === -->
-    <color name="status_safe">#22C55E</color>
+    <!-- Premium Dark Blue Palette -->
+    <color name="bg_navy">#0F172A</color>
+    <color name="bg_navy_light">#1E293B</color>
+    <color name="aegis_blue">#38BDF8</color>
+    <color name="slate_text">#94A3B8</color>
+    <color name="white">#FFFFFF</color>
+    <color name="error_red">#EF4444</color>
+    
+    <!-- Functional Mappings -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#94A3B8</color>
     <color name="status_warning">#F59E0B</color>
     <color name="status_danger">#EF4444</color>
-
-    <!-- === BORDER / DIVIDER COLORS === -->
-    <color name="border_subtle">#E2E8F0</color>
-    <color name="border_visible">#CBD5E1</color>
-
-    <!-- === BOTTOM NAVIGATION === -->
-    <color name="nav_background">#FFFFFF</color>
-    <color name="nav_icon_active">#3B82F6</color>
-    <color name="nav_icon_inactive">#94A3B8</color>
-
-    <!-- === SYSTEM / MATERIAL REQUIRED COLORS === -->
-    <color name="colorPrimary">#3B82F6</color>
-    <color name="colorPrimaryVariant">#0284C7</color>
-    <color name="colorOnPrimary">#FFFFFF</color>
-
-    <color name="colorSecondary">#475569</color>
-    <color name="colorSecondaryVariant">#94A3B8</color>
-    <color name="colorOnSecondary">#FFFFFF</color>
-
-    <color name="colorBackground">#F5F7FA</color>
-    <color name="colorOnBackground">#0F172A</color>
-
-    <color name="colorSurface">#FFFFFF</color>
-    <color name="colorOnSurface">#0F172A</color>
-
-    <color name="colorError">#EF4444</color>
-    <color name="colorOnError">#FFFFFF</color>
+    <color name="status_safe">#22C55E</color>
 </resources>

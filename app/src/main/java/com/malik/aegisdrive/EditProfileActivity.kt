@@ -12,6 +12,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.io.FileOutputStream
 
@@ -19,6 +22,7 @@ class EditProfileActivity : AppCompatActivity() {
 
     private lateinit var ivAvatarEdit: ImageView
     private lateinit var etName: EditText
+    private lateinit var etEmailRead: EditText
     private var selectedImageUri: Uri? = null
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -38,6 +42,7 @@ class EditProfileActivity : AppCompatActivity() {
 
         ivAvatarEdit = findViewById(R.id.ivAvatarEdit)
         etName = findViewById(R.id.etName)
+        etEmailRead = findViewById(R.id.etEmailRead)
 
         loadCurrentProfile()
         setupListeners()
@@ -45,10 +50,14 @@ class EditProfileActivity : AppCompatActivity() {
 
     private fun loadCurrentProfile() {
         val prefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-        val name = prefs.getString("user_name", "Anees Ahmed")
+        val name = prefs.getString("user_name", "Driver Name")
         val imagePath = prefs.getString("user_image_path", null)
 
         etName.setText(name)
+        
+        // 🚀 SYNC: Fetch current operator email
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        etEmailRead.setText(currentUser?.email ?: "Not Authenticated")
 
         if (imagePath != null) {
             val file = File(imagePath)
@@ -117,15 +126,36 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun deleteAccountData() {
-        getSharedPreferences("AegisProfile", Context.MODE_PRIVATE).edit().clear().apply()
-        getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
-        getSharedPreferences("AegisSettings", Context.MODE_PRIVATE).edit().clear().apply()
-        val profileFile = File(filesDir, "profile_picture.jpg")
-        if (profileFile.exists()) profileFile.delete()
+        val user = FirebaseAuth.getInstance().currentUser
+        
+        user?.delete()?.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                // 🚀 SYNC: Clear Local Data
+                getSharedPreferences("AegisProfile", Context.MODE_PRIVATE).edit().clear().apply()
+                getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
+                getSharedPreferences("AegisSettings", Context.MODE_PRIVATE).edit().clear().apply()
+                val profileFile = File(filesDir, "profile_picture.jpg")
+                if (profileFile.exists()) profileFile.delete()
 
-        startActivity(Intent(this, LoginActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        })
-        finish()
+                // Firestore cleanup
+                FirebaseFirestore.getInstance().collection("users").document(user.uid).delete()
+
+                AegisNotify.show(this, "Aegis Identity Purged", AegisNotify.Type.SUCCESS)
+
+                startActivity(Intent(this, LoginActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                })
+                finishAffinity()
+            } else {
+                val exception = task.exception
+                if (exception is com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
+                    val snackbar = Snackbar.make(findViewById(android.R.id.content), 
+                        "Security: Please logout and login again to delete account.", Snackbar.LENGTH_LONG)
+                    snackbar.show()
+                } else {
+                    AegisNotify.show(this, "Purge Failed: ${exception?.localizedMessage}", AegisNotify.Type.ERROR)
+                }
+            }
+        }
     }
 }

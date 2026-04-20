@@ -3,122 +3,139 @@ package com.malik.aegisdrive
 import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
+import android.view.View
 import android.view.inputmethod.InputMethodManager
-import android.widget.CheckBox
+import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 
 class SignUpActivity : AppCompatActivity() {
 
-    private var loadingDialog: AlertDialog? = null
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
+    private lateinit var signUpProgressBar: ProgressBar
+    private lateinit var btnSignUp: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_signup)
 
-        // Input Layouts (for error display)
+        // Ensure Firebase is initialized within the activity lifecycle
+        com.google.firebase.FirebaseApp.initializeApp(this)
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
+
         val nameLayout = findViewById<TextInputLayout>(R.id.nameInputLayout)
         val emailLayout = findViewById<TextInputLayout>(R.id.emailInputLayout)
-        val phoneLayout = findViewById<TextInputLayout>(R.id.phoneInputLayout)
         val passwordLayout = findViewById<TextInputLayout>(R.id.passwordInputLayout)
-        val confirmPasswordLayout = findViewById<TextInputLayout>(R.id.confirmPasswordInputLayout)
-
-        // Edit Texts
         val etFullName = findViewById<TextInputEditText>(R.id.etFullName)
         val etEmail = findViewById<TextInputEditText>(R.id.etEmail)
-        val etPhone = findViewById<TextInputEditText>(R.id.etPhone)
         val etPassword = findViewById<TextInputEditText>(R.id.etPassword)
-        val etConfirmPassword = findViewById<TextInputEditText>(R.id.etConfirmPassword)
-        
-        val cbTerms = findViewById<CheckBox>(R.id.cbTerms)
-        val btnSignUp = findViewById<MaterialButton>(R.id.btnSignUp)
+        btnSignUp = findViewById(R.id.btnSignUp)
         val tvGoToLogin = findViewById<TextView>(R.id.tvGoToLogin)
-        val btnBack = findViewById<MaterialCardView>(R.id.btnBackToLogin)
+        signUpProgressBar = findViewById(R.id.signUpProgressBar)
 
         btnSignUp.setOnClickListener {
-            // Reset all errors
             nameLayout.error = null
             emailLayout.error = null
-            phoneLayout.error = null
             passwordLayout.error = null
-            confirmPasswordLayout.error = null
 
             val name = etFullName.text.toString().trim()
             val email = etEmail.text.toString().trim()
             val password = etPassword.text.toString().trim()
-            val confirmPassword = etConfirmPassword.text.toString().trim()
 
             var isValid = true
-
-            // Validations
             if (name.isEmpty()) {
-                nameLayout.error = "Full name is required"
+                nameLayout.error = "Operator name required"
                 isValid = false
             }
-
-            if (email.isEmpty()) {
-                emailLayout.error = "Email is required"
-                isValid = false
-            } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                emailLayout.error = "Please enter a valid email"
+            if (email.isEmpty() || !Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                emailLayout.error = "Valid email required"
                 isValid = false
             }
-
-            if (password.isEmpty()) {
-                passwordLayout.error = "Password is required"
-                isValid = false
-            } else if (password.length < 8) {
-                passwordLayout.error = "Password must be at least 8 characters"
-                isValid = false
-            }
-
-            if (confirmPassword != password) {
-                confirmPasswordLayout.error = "Passwords do not match"
-                isValid = false
-            }
-
-            if (!cbTerms.isChecked) {
-                AegisNotify.show(this, "Please agree to the Terms and Conditions", AegisNotify.Type.WARNING)
+            if (password.length < 8) {
+                passwordLayout.error = "Min 8 characters required"
                 isValid = false
             }
 
             if (isValid) {
                 hideKeyboard()
-                showLoadingDialog("Creating your Aegis account...")
-                
-                // Simulate network delay
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    loadingDialog?.dismiss()
-                    AegisNotify.show(this, "Account created successfully!", AegisNotify.Type.SUCCESS)
-                    val intent = Intent(this, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                    startActivity(intent)
-                    finish()
-                }, 1500)
+                performSignUp(name, email, password)
             }
         }
 
         tvGoToLogin.setOnClickListener { finish() }
-        btnBack.setOnClickListener { finish() }
     }
 
-    private fun showLoadingDialog(message: String) {
-        val builder = AlertDialog.Builder(this)
-        val dialogView = layoutInflater.inflate(R.layout.dialog_loading, null)
-        dialogView.findViewById<TextView>(R.id.loadingText).text = message
+    private fun performSignUp(name: String, email: String, password: String) {
+        setLoading(true)
         
-        builder.setView(dialogView)
-        builder.setCancelable(false)
-        
-        loadingDialog = builder.create()
-        loadingDialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        loadingDialog?.show()
+        auth.createUserWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    user?.let {
+                        // 🚀 SYNC: Create visible document in 'users' collection
+                        val userMap = hashMapOf(
+                            "name" to name,
+                            "email" to email,
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "lastLogin" to FieldValue.serverTimestamp(),
+                            "totalDrives" to 0,
+                            "averageScore" to 100
+                        )
+
+                        db.collection("users").document(it.uid)
+                            .set(userMap)
+                            .addOnSuccessListener {
+                                setLoading(false)
+                                AegisNotify.show(this, "Identity Initialized!", AegisNotify.Type.SUCCESS)
+                                startActivity(Intent(this, MainActivity::class.java))
+                                finishAffinity()
+                            }
+                            .addOnFailureListener { e ->
+                                setLoading(false)
+                                showErrorSnackbar("Firestore Error: ${e.localizedMessage}")
+                            }
+                    }
+                } else {
+                    setLoading(false)
+                    val exception = task.exception
+                    val message = if (exception is FirebaseAuthException) {
+                        "Identity Error: ${exception.message}"
+                    } else {
+                        exception?.localizedMessage ?: "Registration failed"
+                    }
+                    showErrorSnackbar(message)
+                }
+            }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        if (isLoading) {
+            btnSignUp.text = ""
+            btnSignUp.isEnabled = false
+            signUpProgressBar.visibility = View.VISIBLE
+        } else {
+            btnSignUp.text = "INITIALIZE IDENTITY"
+            btnSignUp.isEnabled = true
+            signUpProgressBar.visibility = View.GONE
+        }
+    }
+
+    private fun showErrorSnackbar(message: String) {
+        val snackbar = Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+        snackbar.setBackgroundTint(resources.getColor(R.color.error_red, theme))
+        snackbar.setTextColor(resources.getColor(R.color.white, theme))
+        snackbar.show()
     }
 
     private fun hideKeyboard() {

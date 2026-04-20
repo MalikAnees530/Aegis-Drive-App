@@ -14,6 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.File
 import java.util.Locale
@@ -185,9 +186,13 @@ class SettingsActivity : AppCompatActivity() {
                 .setTitle("Terminate Session?")
                 .setMessage("Log out of the Aegis Security Network?")
                 .setPositiveButton("LOGOUT") { _, _ ->
+                    // 🚀 SYNC: Firebase Sign Out
+                    FirebaseAuth.getInstance().signOut()
+                    
                     val intent = Intent(this, LoginActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                     startActivity(intent)
+                    finishAffinity()
                 }
                 .setNegativeButton("CANCEL", null)
                 .show()

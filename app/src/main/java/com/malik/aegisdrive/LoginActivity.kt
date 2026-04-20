@@ -2,32 +2,44 @@ package com.malik.aegisdrive
 
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Patterns
+import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 
 class LoginActivity : AppCompatActivity() {
 
-    private var loadingDialog: AlertDialog? = null
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
+    private lateinit var loginProgressBar: ProgressBar
+    private lateinit var btnLogin: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
+        // Ensure Firebase is initialized within the activity lifecycle
+        com.google.firebase.FirebaseApp.initializeApp(this)
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
+
         val emailLayout = findViewById<TextInputLayout>(R.id.emailInputLayout)
         val passwordLayout = findViewById<TextInputLayout>(R.id.passwordInputLayout)
         val etEmail = findViewById<TextInputEditText>(R.id.etEmail)
         val etPassword = findViewById<TextInputEditText>(R.id.etPassword)
-        val btnLogin = findViewById<MaterialButton>(R.id.btnLogin)
-        val btnSignUp = findViewById<MaterialButton>(R.id.tvGoToSignUp)
-        val tvForgotPassword = findViewById<TextView>(R.id.tvForgotPassword)
+        btnLogin = findViewById(R.id.btnLogin)
+        val btnSignUp = findViewById<TextView>(R.id.tvGoToSignUp)
+        loginProgressBar = findViewById(R.id.loginProgressBar)
 
         btnLogin.setOnClickListener {
             emailLayout.error = null
@@ -38,52 +50,80 @@ class LoginActivity : AppCompatActivity() {
 
             var isValid = true
             if (email.isEmpty()) {
-                emailLayout.error = "Email is required"
+                emailLayout.error = "Identity email required"
                 isValid = false
             } else if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                emailLayout.error = "Invalid email format"
+                emailLayout.error = "Invalid identity format"
                 isValid = false
             }
 
             if (password.isEmpty()) {
-                passwordLayout.error = "Password is required"
+                passwordLayout.error = "Access key required"
                 isValid = false
             }
 
             if (isValid) {
                 hideKeyboard()
-                showLoadingDialog("Authenticating with Aegis...")
-                
-                // Simulate network delay for a professional feel
-                Handler(Looper.getMainLooper()).postDelayed({
-                    loadingDialog?.dismiss()
-                    startActivity(Intent(this, MainActivity::class.java))
-                    finish()
-                }, 1500)
+                performLogin(email, password)
             }
         }
 
         btnSignUp.setOnClickListener {
             startActivity(Intent(this, SignUpActivity::class.java))
         }
+    }
 
-        tvForgotPassword.setOnClickListener {
-            // Placeholder for forgot password
+    private fun performLogin(email: String, password: String) {
+        setLoading(true)
+        
+        auth.signInWithEmailAndPassword(email, password)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    user?.let {
+                        // 🚀 SYNC: Update visible lastLogin in Firestore
+                        db.collection("users").document(it.uid)
+                            .update("lastLogin", FieldValue.serverTimestamp())
+                            .addOnSuccessListener {
+                                setLoading(false)
+                                startActivity(Intent(this, MainActivity::class.java))
+                                finish()
+                            }
+                            .addOnFailureListener { e ->
+                                setLoading(false)
+                                showErrorSnackbar("Sync Error: ${e.localizedMessage}")
+                            }
+                    }
+                } else {
+                    setLoading(false)
+                    val exception = task.exception
+                    val message = if (exception is FirebaseAuthException) {
+                        "Access Denied: ${exception.message}"
+                    } else {
+                        exception?.localizedMessage ?: "Authentication failed"
+                    }
+                    showErrorSnackbar(message)
+                }
+            }
+    }
+
+    private fun setLoading(isLoading: Boolean) {
+        if (isLoading) {
+            btnLogin.text = ""
+            btnLogin.isEnabled = false
+            loginProgressBar.visibility = View.VISIBLE
+        } else {
+            btnLogin.text = "ACCESS PORTAL"
+            btnLogin.isEnabled = true
+            loginProgressBar.visibility = View.GONE
         }
     }
 
-    private fun showLoadingDialog(message: String) {
-        val builder = AlertDialog.Builder(this)
-        val dialogView = layoutInflater.inflate(R.layout.dialog_loading, null)
-        dialogView.findViewById<TextView>(R.id.loadingText).text = message
-        
-        builder.setView(dialogView)
-        builder.setCancelable(false)
-        
-        loadingDialog = builder.create()
-        // This makes the dialog background transparent so our rounded corners show perfectly
-        loadingDialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        loadingDialog?.show()
+    private fun showErrorSnackbar(message: String) {
+        val snackbar = Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG)
+        snackbar.setBackgroundTint(resources.getColor(R.color.error_red, theme))
+        snackbar.setTextColor(resources.getColor(R.color.white, theme))
+        snackbar.show()
     }
 
     private fun hideKeyboard() {

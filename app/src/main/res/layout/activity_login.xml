@@ -1,268 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_deepest"
-    android:fillViewport="true"
-    android:scrollbars="none">
+    android:background="@color/bg_navy"
+    android:fillViewport="true">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:padding="24dp">
 
-        <!-- DECORATIVE HEADER -->
-        <FrameLayout
-            android:layout_width="match_parent"
-            android:layout_height="280dp"
-            android:background="#0D1B26">
+        <ImageView
+            android:id="@+id/ivLogo"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_marginTop="40dp"
+            android:src="@drawable/ic_aegis_logo"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Corner Accents -->
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="top|start" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="top|start" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="top|end" android:layout_margin="20dp" android:background="@color/accent_primary" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="top|end" android:layout_margin="20dp" android:background="@color/accent_primary" />
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="AEGIS DRIVE"
+            android:textColor="@color/aegis_blue"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/ivLogo" />
 
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="bottom|start" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="bottom|start" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="20dp" android:layout_height="2dp" android:layout_gravity="bottom|end" android:layout_margin="20dp" android:background="@color/accent_dark" />
-            <View android:layout_width="2dp" android:layout_height="20dp" android:layout_gravity="bottom|end" android:layout_margin="20dp" android:background="@color/accent_dark" />
+        <TextView
+            android:id="@+id/tvHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:text="Authenticate"
+            android:textColor="@color/white"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvTitle" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:paddingBottom="16dp">
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Enter your operator credentials"
+            android:textColor="@color/slate_text"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tvHeader" />
 
-                <!-- Logo Icon -->
-                <FrameLayout
-                    android:layout_width="88dp"
-                    android:layout_height="88dp"
-                    android:layout_gravity="center_horizontal">
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="88dp"
-                        android:layout_height="88dp"
-                        android:layout_gravity="center"
-                        app:cardBackgroundColor="@android:color/transparent"
-                        app:cardCornerRadius="44dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="#2A4558"
-                        app:strokeWidth="1dp" />
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
-                        android:layout_gravity="center"
-                        app:cardBackgroundColor="#1A3D5573"
-                        app:cardCornerRadius="22dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="@color/accent_primary"
-                        app:strokeWidth="2dp">
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="◉"
-                            android:textColor="@color/accent_light"
-                            android:textSize="20sp" />
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <View android:layout_width="12dp" android:layout_height="1dp" android:layout_gravity="center_vertical|start" android:background="@color/accent_primary" />
-                    <View android:layout_width="12dp" android:layout_height="1dp" android:layout_gravity="center_vertical|end" android:background="@color/accent_primary" />
-                </FrameLayout>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="18dp"
-                    android:text="AEGIS DRIVE"
-                    android:textColor="@color/text_primary"
-                    android:textSize="24sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.22"
-                    android:fontFamily="sans-serif-condensed" />
-
-                <View
-                    android:layout_width="32dp"
-                    android:layout_height="2dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@color/accent_primary"
-                    android:layout_gravity="center_horizontal" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="DRIVER SAFETY INTELLIGENCE"
-                    android:textColor="@color/accent_dark"
-                    android:textSize="11sp"
-                    android:letterSpacing="0.15"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </FrameLayout>
-
-        <!-- FORM SECTION -->
-        <LinearLayout
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/emailInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="36dp"
-            android:paddingBottom="48dp">
+            android:layout_marginTop="32dp"
+            android:hint="Operator Email"
+            android:textColorHint="@color/slate_text"
+            app:boxBackgroundColor="@color/bg_navy_light"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:hintTextColor="@color/aegis_blue"
+            app:layout_constraintTop_toBottomOf="@+id/tvSubtitle"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="@color/aegis_blue">
 
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="32dp">
+                android:inputType="textEmailAddress"
+                android:textColor="@color/white" />
 
-                <View
-                    android:layout_width="4dp"
-                    android:layout_height="40dp"
-                    android:background="@color/accent_primary"
-                    android:layout_marginEnd="16dp" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Welcome Back"
-                        android:textColor="@color/text_primary"
-                        android:textSize="26sp"
-                        android:textStyle="bold" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Sign in to your secure account"
-                        android:textColor="@color/text_disabled"
-                        android:textSize="14sp" />
-                </LinearLayout>
-            </LinearLayout>
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/passwordInputLayout"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Access Key"
+            android:textColorHint="@color/slate_text"
+            app:boxBackgroundColor="@color/bg_navy_light"
+            app:boxCornerRadiusBottomEnd="16dp"
+            app:boxCornerRadiusBottomStart="16dp"
+            app:boxCornerRadiusTopEnd="16dp"
+            app:boxCornerRadiusTopStart="16dp"
+            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/slate_text"
+            app:hintTextColor="@color/aegis_blue"
+            app:layout_constraintTop_toBottomOf="@+id/emailInputLayout"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/aegis_blue">
 
-            <!-- Email Field -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/emailInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:hint="Email Address"
-                app:startIconDrawable="@drawable/ic_email"
-                app:startIconTint="@color/accent_primary"
-                app:errorEnabled="true">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etEmail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textEmailAddress"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+                android:inputType="textPassword"
+                android:textColor="@color/white" />
 
-            <!-- Password Field -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/passwordInputLayout"
-                style="@style/AegisDrive.TextInputLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Password"
-                app:startIconDrawable="@drawable/ic_lock"
-                app:startIconTint="@color/accent_primary"
-                app:passwordToggleEnabled="true"
-                app:passwordToggleTint="@color/accent_primary"
-                app:errorEnabled="true">
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPassword"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="textPassword"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <TextView
-                android:id="@+id/tvForgotPassword"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:text="Forgot Password?"
-                android:textColor="@color/accent_light"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:paddingVertical="8dp"
-                android:layout_marginBottom="24dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogin"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="40dp"
+            android:text="ACCESS PORTAL"
+            android:textColor="@color/bg_navy"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/aegis_blue"
+            app:cornerRadius="16dp"
+            app:layout_constraintTop_toBottomOf="@+id/passwordInputLayout" />
 
-            <!-- Sign In Button (Refined) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnLogin"
-                style="@style/AegisDrive.Button.Primary"
-                android:layout_width="match_parent"
-                android:layout_height="58dp"
-                android:text="Sign In"
-                android:textAllCaps="false"
-                android:letterSpacing="0.05"
-                android:textSize="17sp"
-                app:cornerRadius="14dp"
-                app:icon="@drawable/ic_navigate"
-                app:iconGravity="textEnd"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
+        <ProgressBar
+            android:id="@+id/loginProgressBar"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:visibility="gone"
+            android:indeterminateTint="@color/bg_navy"
+            app:layout_constraintBottom_toBottomOf="@+id/btnLogin"
+            app:layout_constraintEnd_toEndOf="@+id/btnLogin"
+            app:layout_constraintStart_toStartOf="@+id/btnLogin"
+            app:layout_constraintTop_toTopOf="@+id/btnLogin" />
 
-            <!-- Divider -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginTop="36dp"
-                android:layout_marginBottom="28dp">
-                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/border_subtle" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:paddingHorizontal="16dp"
-                    android:text="NEW TO AEGIS?"
-                    android:textColor="@color/text_disabled"
-                    android:letterSpacing="0.1"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-                <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="@color/border_subtle" />
-            </LinearLayout>
+        <TextView
+            android:id="@+id/tvGoToSignUp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="New operator? Initialize Identity"
+            android:textColor="@color/slate_text"
+            android:textSize="14sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/btnLogin" />
 
-            <!-- Create Account Button (Refined) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/tvGoToSignUp"
-                style="@style/AegisDrive.Button.Outlined"
-                android:layout_width="match_parent"
-                android:layout_height="58dp"
-                android:text="Create My Account"
-                android:textAllCaps="false"
-                android:letterSpacing="0.05"
-                android:textSize="16sp"
-                app:cornerRadius="14dp"
-                app:icon="@drawable/ic_person"
-                app:iconPadding="12dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="36dp"
-                android:text="v1.0.0  ·  Secured by Aegis Intelligence"
-                android:textColor="@color/text_disabled"
-                android:textSize="11sp"
-                android:gravity="center"
-                android:letterSpacing="0.05" />
-        </LinearLayout>
-    </LinearLayout>
 </androidx.core.widget.NestedScrollView>
