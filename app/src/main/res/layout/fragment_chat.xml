@@ -274,7 +274,7 @@
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_mic"
+                        android:src="@drawable/ic_mic_modern"
                         app:tint="@color/accent_primary"/>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -306,7 +306,7 @@
                         android:layout_width="22dp"
                         android:layout_height="22dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_check_circle" 
+                        android:src="@drawable/ic_send_modern" 
                         app:tint="@color/bg_deepest"/>
                 </com.google.android.material.card.MaterialCardView>
 

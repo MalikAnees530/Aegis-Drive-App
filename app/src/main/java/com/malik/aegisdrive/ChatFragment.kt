@@ -145,11 +145,11 @@ class ChatFragment : Fragment() {
 
             if (isVoiceMode) {
                 btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent_primary))
-                ivMicIcon.setImageResource(if (isListening) R.drawable.ic_check_circle else R.drawable.ic_mic)
+                ivMicIcon.setImageResource(if (isListening) R.drawable.ic_check_circle else R.drawable.ic_mic_modern)
                 ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.bg_deepest))
             } else {
                 btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.bg_elevated))
-                ivMicIcon.setImageResource(R.drawable.ic_mic)
+                ivMicIcon.setImageResource(R.drawable.ic_mic_modern)
                 ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_primary))
             }
         }
