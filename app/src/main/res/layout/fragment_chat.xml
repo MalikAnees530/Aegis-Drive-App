@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- 🚀 PREMIUM SAFETY HEADER -->
+        <!-- 🚀 LEAD UI/UX: PREMIUM AEGIS HEADER -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/chatHeader"
             android:layout_width="match_parent"
@@ -22,7 +22,7 @@
             app:cardCornerRadius="24dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp"
+            app:strokeWidth="1.5dp"
             app:layout_constraintTop_toTopOf="parent">
 
             <LinearLayout
@@ -38,7 +38,9 @@
                     android:layout_height="48dp"
                     app:cardBackgroundColor="@color/bg_elevated"
                     app:cardCornerRadius="16dp"
-                    app:cardElevation="0dp">
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp">
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
@@ -51,40 +53,55 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:orientation="vertical">
+                    android:layout_marginStart="14dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Aegis Intelligence"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:textStyle="bold"/>
-                    <TextView
-                        android:id="@+id/tvSafetyMirror"
+                        android:text="🧠"
+                        android:textSize="22sp"
+                        android:layout_marginEnd="10dp"/>
+
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="AI SAFE • 100%"
-                        android:textColor="@color/status_safe"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05"/>
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Aegis Intelligence"
+                            android:textColor="@color/text_primary"
+                            android:textSize="17sp"
+                            android:fontFamily="sans-serif-black"
+                            android:letterSpacing="0.02"/>
+                        <TextView
+                            android:id="@+id/tvSafetyMirror"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="AI SAFE • 100%"
+                            android:textColor="@color/status_safe"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"/>
+                    </LinearLayout>
                 </LinearLayout>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnNewChat"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    app:cardBackgroundColor="@color/bg_elevated"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp">
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    app:cardBackgroundColor="@color/accent_primary"
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="2dp">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:text="+"
-                        android:textColor="@color/accent_primary"
-                        android:textSize="24sp"
+                        android:textColor="@color/bg_deepest"
+                        android:textSize="22sp"
                         android:textStyle="bold"/>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -96,25 +113,106 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginHorizontal="16dp"
-            android:paddingBottom="8dp"
+            android:paddingBottom="12dp"
             android:clipToPadding="false"
+            android:overScrollMode="never"
             app:layout_constraintTop_toBottomOf="@id/chatHeader"
-            app:layout_constraintBottom_toTopOf="@id/quickChipsRow">
+            app:layout_constraintBottom_toTopOf="@id/audioControlPanel">
 
             <LinearLayout
                 android:id="@+id/chatMessagesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="8dp"/>
+                android:paddingTop="12dp"/>
         </ScrollView>
 
-        <!-- 🚀 QUICK ACTION CHIPS -->
+        <!-- 🚀 LEAD UI/UX: AUDIO CONTROL PANEL -->
+        <LinearLayout
+            android:id="@+id/audioControlPanel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/quickChipsRow"
+            app:layout_constraintEnd_toEndOf="@id/chatInputBar">
+
+            <!-- Manual Speak Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnPlaySpeak"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/accent_primary"
+                app:strokeWidth="1dp">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="8dp"
+                    android:gravity="center">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔊"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SPEAK ANSWER"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Stop Speak Button -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnStopSpeak"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/bg_surface"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                app:strokeColor="@color/status_danger"
+                app:strokeWidth="1dp">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="8dp"
+                    android:gravity="center">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⏹"
+                        android:textColor="@color/status_danger"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="STOP"
+                        android:textColor="@color/status_danger"
+                        android:textSize="10sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- QUICK ACTION CHIPS -->
         <HorizontalScrollView
             android:id="@+id/quickChipsRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
+            android:layout_marginBottom="16dp"
             android:scrollbars="none"
             app:layout_constraintBottom_toTopOf="@id/chatInputBar">
 
@@ -128,26 +226,13 @@
                     android:id="@+id/chipSafety"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="10dp"
                     app:cardBackgroundColor="@color/bg_surface"
                     app:cardCornerRadius="20dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/border_subtle"
                     app:strokeWidth="1dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🛡️ Safety Score" android:textColor="@color/text_primary" android:textSize="11sp" android:paddingHorizontal="14dp" android:paddingVertical="8dp" android:textStyle="bold"/>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/chipHospital"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    app:cardBackgroundColor="@color/bg_surface"
-                    app:cardCornerRadius="20dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/border_subtle"
-                    app:strokeWidth="1dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏥 Nearest Hospital" android:textColor="@color/text_primary" android:textSize="11sp" android:paddingHorizontal="14dp" android:paddingVertical="8dp" android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🛡️ Safety Score" android:textColor="@color/text_primary" android:textSize="12sp" android:paddingHorizontal="16dp" android:paddingVertical="10dp" android:textStyle="bold"/>
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
@@ -159,24 +244,24 @@
                     app:cardElevation="0dp"
                     app:strokeColor="@color/border_subtle"
                     app:strokeWidth="1dp">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏠 Navigate Home" android:textColor="@color/text_primary" android:textSize="11sp" android:paddingHorizontal="14dp" android:paddingVertical="8dp" android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🏠 Navigate Home" android:textColor="@color/text_primary" android:textSize="12sp" android:paddingHorizontal="16dp" android:paddingVertical="10dp" android:textStyle="bold"/>
                 </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
         </HorizontalScrollView>
 
-        <!-- INPUT BAR -->
+        <!-- MODERN INPUT BAR -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/chatInputBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="24dp"
             app:cardBackgroundColor="@color/bg_surface"
-            app:cardCornerRadius="24dp"
-            app:cardElevation="4dp"
+            app:cardCornerRadius="30dp"
+            app:cardElevation="8dp"
             app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp"
+            app:strokeWidth="1.5dp"
             app:layout_constraintBottom_toBottomOf="parent">
 
             <LinearLayout
@@ -188,18 +273,21 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnMic"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginEnd="8dp"
-                    app:cardBackgroundColor="@color/accent_primary"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="0dp">
+                    app:cardBackgroundColor="@color/bg_elevated"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp">
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:id="@+id/ivMicIcon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_mic"
-                        app:tint="@color/bg_deepest"/>
+                        app:tint="@color/accent_primary"/>
                 </com.google.android.material.card.MaterialCardView>
 
                 <EditText
@@ -207,33 +295,31 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:hint="Talk to Aegis..."
+                    android:hint="Message Aegis AI..."
                     android:textColorHint="@color/text_disabled"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-medium"
                     android:background="@null"
                     android:inputType="text"
                     android:imeOptions="actionSend"
-                    android:maxLines="3"
-                    android:paddingHorizontal="8dp"/>
+                    android:maxLines="4"
+                    android:paddingHorizontal="10dp"/>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/btnSend"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:layout_marginStart="8dp"
-                    app:cardBackgroundColor="@color/bg_deepest"
-                    app:cardCornerRadius="22dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/accent_primary"
-                    app:strokeWidth="1dp">
+                    app:cardBackgroundColor="@color/accent_primary"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="4dp">
                     <ImageView
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_navigate"
-                        android:rotation="45"
-                        app:tint="@color/accent_primary"/>
+                        android:src="@drawable/ic_check_circle" 
+                        app:tint="@color/bg_deepest"/>
                 </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
@@ -241,9 +327,9 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 🚀 SESSION DRAWER -->
+    <!-- 🚀 LEAD UI/UX: ALL SESSIONS MENU WITH PREMIUM BORDERS -->
     <com.google.android.material.navigation.NavigationView
-        android:layout_width="280dp"
+        android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/bg_surface">
@@ -252,36 +338,89 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="24dp"
+            android:background="@color/bg_surface">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Recent Chats"
-                android:textColor="@color/text_primary"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="20dp"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="28dp">
+                
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardBackgroundColor="@color/bg_elevated"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_subtle"
+                    app:strokeWidth="1dp">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:gravity="center"
+                        android:text="📜"
+                        android:textSize="18sp" />
+                </com.google.android.material.card.MaterialCardView>
 
-            <ScrollView
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ALL SESSIONS"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.1"/>
+            </LinearLayout>
+
+            <!-- Bordered List Container -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1">
-                <LinearLayout
-                    android:id="@+id/sessionsContainer"
+                android:layout_weight="1"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/border_subtle"
+                app:strokeWidth="1.5dp">
+                <ScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"/>
-            </ScrollView>
+                    android:layout_height="match_parent"
+                    android:overScrollMode="never"
+                    android:padding="12dp">
+                    <LinearLayout
+                        android:id="@+id/sessionsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"/>
+                </ScrollView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeleteAllSessions"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/border_subtle" android:layout_marginVertical="20dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDeleteAll"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Delete All Sessions"
-                android:textColor="#EF4444"
-                android:textAllCaps="false"/>
+                app:cardBackgroundColor="#10EF4444"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#40EF4444"
+                app:strokeWidth="1dp">
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDeleteAllSessions"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:text="Wipe Intelligence History"
+                    android:textColor="#EF4444"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.02"
+                    android:textAllCaps="false"
+                    app:rippleColor="#20EF4444" />
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </com.google.android.material.navigation.NavigationView>
