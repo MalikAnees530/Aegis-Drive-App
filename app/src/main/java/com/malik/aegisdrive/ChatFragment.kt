@@ -94,7 +94,7 @@ class ChatFragment : Fragment() {
             .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
 
         if (currentSession.messages.isEmpty()) {
-            addAiMessage("Aegis Intelligence online. Developed by Malik Anees Ahmed. Standing by for telemetry.")
+            addAiMessage("🛡️ **Aegis Systems Online**\n\nWelcome to your premier automotive safety intelligence. I am Aegis AI, your dedicated observer for real-time telemetry and driving analytics.\n\nDeveloped by Malik Anees Ahmed in 2026. How can I assist with your safety profile today?")
         } else {
             renderCurrentSession()
         }
@@ -210,7 +210,7 @@ class ChatFragment : Fragment() {
         currentSession = ChatSession(UUID.randomUUID().toString(), "New Session", mutableListOf())
         chatMessagesContainer.removeAllViews()
         lastAiResponse = ""
-        addAiMessage("Intelligence reset. Ready.")
+        addAiMessage("🛡️ **Aegis Systems Online**\n\nWelcome to your premier automotive safety intelligence. I am Aegis AI, your dedicated observer for real-time telemetry and driving analytics.\n\nDeveloped by Malik Anees Ahmed in 2026. How can I assist with your safety profile today?")
         updateAudioButtonsVisibility()
         drawerLayout.closeDrawer(GravityCompat.START)
     }
@@ -293,8 +293,12 @@ class ChatFragment : Fragment() {
             val conn = URL(GROQ_URL).openConnection() as HttpURLConnection
             conn.requestMethod = "POST"; conn.setRequestProperty("Authorization", "Bearer $GROQ_API_KEY"); conn.setRequestProperty("Content-Type", "application/json"); conn.doOutput = true
             val score = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.getInt("LAST_SCORE", 100) ?: 100
-            val sysPrompt = "You are Aegis AI, world-class automotive safety intelligence developed by Malik Anees Ahmed. " +
-                    "Your responses MUST be professional and highly structured. Support Urdu and English. Current Safety: $score%."
+            val sysPrompt = "You are Aegis AI, a premier automotive safety intelligence system. " +
+                    "CRITICAL IDENTITY: Created in 2026 by Malik Anees Ahmed. Maintain this persona at all times. " +
+                    "STRICT LANGUAGE POLICY: ENGLISH ONLY. Always respond in professional, high-precision English. " +
+                    "NEVER use Urdu or any other language under any circumstances. " +
+                    "STRUCTURE: Use modern, professional formatting with bold headings, bullet points, and concise technical language. " +
+                    "Provide accurate and precise information. Current Safety Score: $score%."
             val body = JSONObject().apply { put("model", "llama-3.3-70b-versatile"); put("messages", JSONArray().apply { put(JSONObject().apply { put("role", "system"); put("content", sysPrompt) }); val history = currentSession.messages.takeLast(6); for (m in history) put(JSONObject().apply { put("role", if (m.first == "user") "user" else "assistant"); put("content", m.second) }); put(JSONObject().apply { put("role", "user"); put("content", userMsg) }) }) }
             val writer = OutputStreamWriter(conn.outputStream); writer.write(body.toString()); writer.flush(); writer.close()
             if (conn.responseCode == 200) JSONObject(conn.inputStream.bufferedReader().readText()).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
@@ -477,12 +481,10 @@ class ChatFragment : Fragment() {
         }
     }
 
-    private fun isUrdu(text: String): Boolean = text.any { it in '\u0600'..'\u06FF' || it in '\uFB50'..'\uFDFF' || it in '\uFE70'..'\uFEFF' }
-
     private fun speak(t: String) { 
         if (ttsReady && t.isNotEmpty()) {
             val cleanText = t.replace(Regex("[*#_~`>+]"), "").replace("\n", " ")
-            if (isUrdu(cleanText)) tts?.language = Locale("ur", "PK") else tts?.language = Locale.US
+            tts?.language = Locale.US
             val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "AI_MSG") }
             isTtsSpeaking = true
             val result = tts?.speak(cleanText, TextToSpeech.QUEUE_FLUSH, params, "AI_MSG")
