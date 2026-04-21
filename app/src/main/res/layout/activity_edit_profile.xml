@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_deepest"
+    android:background="#0F172A"
     android:orientation="vertical">
 
     <RelativeLayout
@@ -17,17 +17,17 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:layout_alignParentStart="true"
-            app:cardBackgroundColor="@color/bg_surface"
+            app:cardBackgroundColor="#1E293B"
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/border_subtle"
+            app:strokeColor="#334155"
             app:strokeWidth="1dp">
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="←"
-                android:textColor="@color/text_primary"
+                android:textColor="#FFFFFF"
                 android:textSize="20sp" />
         </com.google.android.material.card.MaterialCardView>
         <TextView
@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="EDIT PROFILE"
-            android:textColor="@color/text_primary"
+            android:textColor="#FFFFFF"
             android:textSize="14sp"
             android:textStyle="bold"
             android:letterSpacing="0.2"
@@ -65,14 +65,13 @@
                     android:id="@+id/btnChangeAvatar"
                     android:layout_width="120dp"
                     android:layout_height="120dp"
-                    app:cardBackgroundColor="@color/bg_surface"
+                    app:cardBackgroundColor="#1E293B"
                     app:cardCornerRadius="60dp"
                     app:cardElevation="4dp"
-                    app:strokeColor="@color/accent_primary"
+                    app:strokeColor="#38BDF8"
                     app:strokeWidth="3dp"
                     android:clickable="true"
-                    android:focusable="true"
-                    android:foreground="?attr/selectableItemBackground">
+                    android:focusable="true">
                     <ImageView
                         android:id="@+id/ivAvatarEdit"
                         android:layout_width="match_parent"
@@ -95,7 +94,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tap to change photo"
-                    android:textColor="@color/text_disabled"
+                    android:textColor="#94A3B8"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp"/>
             </LinearLayout>
@@ -105,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="36dp"
                 android:text="DRIVER NAME"
-                android:textColor="@color/accent_primary"
+                android:textColor="#38BDF8"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -115,13 +114,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="8dp"
-                android:background="@drawable/ic_launcher_background"
-                android:backgroundTint="@color/bg_surface"
+                android:background="#1E293B"
                 android:paddingHorizontal="16dp"
-                android:textColor="@color/text_primary"
+                android:textColor="#FFFFFF"
                 android:textSize="16sp"
                 android:hint="Enter your name"
-                android:textColorHint="@color/text_disabled"
+                android:textColorHint="#94A3B8"
                 android:singleLine="true"/>
 
             <TextView
@@ -129,7 +127,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="EMAIL ADDRESS"
-                android:textColor="@color/accent_primary"
+                android:textColor="#38BDF8"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -139,10 +137,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="8dp"
-                android:background="@drawable/ic_launcher_background"
-                android:backgroundTint="@color/bg_surface"
+                android:background="#1E293B"
                 android:paddingHorizontal="16dp"
-                android:textColor="@color/text_disabled"
+                android:textColor="#94A3B8"
                 android:textSize="16sp"
                 android:gravity="center_vertical"
                 android:enabled="false"
@@ -155,16 +152,16 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="36dp"
                 android:text="SAVE CHANGES"
-                android:textColor="@color/text_primary"
+                android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                app:backgroundTint="@color/accent_primary"
+                app:backgroundTint="#38BDF8"
                 app:cornerRadius="16dp" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="@color/border_subtle"
+                android:background="#334155"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="24dp"/>
 
@@ -172,7 +169,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="DANGER ZONE"
-                android:textColor="@color/status_danger"
+                android:textColor="#EF4444"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -183,11 +180,11 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="12dp"
                 android:text="DELETE ACCOUNT"
-                android:textColor="@color/status_danger"
+                android:textColor="#EF4444"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:backgroundTint="#1AEF5350"
-                app:strokeColor="@color/status_danger"
+                app:strokeColor="#EF4444"
                 app:strokeWidth="1dp"
                 app:cornerRadius="16dp" />
 

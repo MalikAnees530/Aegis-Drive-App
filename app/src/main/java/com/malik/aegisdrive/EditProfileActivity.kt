@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.Toast
@@ -49,16 +50,25 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun loadCurrentProfile() {
-        val prefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-        val name = prefs.getString("user_name", "Driver Name")
-        val imagePath = prefs.getString("user_image_path", null)
-
-        etName.setText(name)
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         
-        // 🚀 SYNC: Fetch current operator email
+        // 🚀 FORCE SERVER FETCH to bypass stale local cache
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+            .get(com.google.firebase.firestore.Source.SERVER)
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val name = document.getString("name") ?: ""
+                    etName.setText(name)
+                }
+            }
+        
+        // Fetch current operator email
         val currentUser = FirebaseAuth.getInstance().currentUser
         etEmailRead.setText(currentUser?.email ?: "Not Authenticated")
 
+        // Load Local Avatar remains the same as it's a file path
+        val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
+        val imagePath = profilePrefs.getString("user_image_path", null)
         if (imagePath != null) {
             val file = File(imagePath)
             if (file.exists()) {
@@ -97,23 +107,16 @@ class EditProfileActivity : AppCompatActivity() {
 
     private fun saveProfile() {
         val newName = etName.text.toString().trim()
-        if (newName.isEmpty()) {
-            AegisNotify.show(this, "Name cannot be empty", AegisNotify.Type.WARNING)
-            return
-        }
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        if (newName.isEmpty()) return
 
-        val prefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-        prefs.edit().apply {
-            putString("user_name", newName)
-            if (selectedImageUri != null) {
-                // Save the absolute file path, not the content URI
-                putString("user_image_path", selectedImageUri?.path)
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+            .set(mapOf("name" to newName), com.google.firebase.firestore.SetOptions.merge())
+            .addOnSuccessListener { 
+                AegisNotify.show(this, "Profile Updated", AegisNotify.Type.SUCCESS)
+                finish() 
             }
-            apply()
-        }
-
-        AegisNotify.show(this, "Profile Saved Successfully", AegisNotify.Type.SUCCESS)
-        finish()
+            .addOnFailureListener { e -> Log.e("Aegis", "Save failed", e) }
     }
 
     private fun confirmAccountDeletion() {

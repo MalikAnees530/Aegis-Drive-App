@@ -1,172 +1,144 @@
 package com.malik.aegisdrive
 
 import android.annotation.SuppressLint
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.Typeface
+import android.content.Context
 import android.os.Bundle
-import android.view.Gravity
+import android.util.Log
 import android.view.View
-import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
 @SuppressLint("SetTextI18n")
 class SessionHistoryActivity : AppCompatActivity() {
 
+    private var historyListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private lateinit var rvHistory: RecyclerView
+    private lateinit var tvEmptyState: TextView
+    private lateinit var progressBar: ProgressBar
+    private val sessionList = mutableListOf<DriveSession>()
+    private lateinit var adapter: SessionHistoryAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_session_history)
 
-        val btnBack = findViewById<View>(R.id.btnBack)
-        val listContainer = findViewById<LinearLayout>(R.id.listContainer)
-        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        rvHistory = findViewById(R.id.rvHistory)
+        tvEmptyState = findViewById(R.id.tvEmptyState)
+        progressBar = findViewById(R.id.progressBar)
 
-        btnBack?.setOnClickListener { finish() }
+        findViewById<View>(R.id.btnBack)?.setOnClickListener { finish() }
+        findViewById<View>(R.id.btnWipeHistory)?.setOnClickListener { confirmWipeHistory() }
 
-        // 🚀 FETCH DATA FROM FIREBASE
-        progressBar?.visibility = View.VISIBLE
-        val db = FirebaseFirestore.getInstance()
-        db.collection("DriveSessions")
-            .orderBy("dateObject", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { documents ->
-                progressBar?.visibility = View.GONE
-                if (documents.isEmpty) {
-                    showEmptyState(listContainer)
-                } else {
-                    listContainer?.removeAllViews()
-                    for (doc in documents) {
-                        addSessionCard(listContainer!!, doc)
+        adapter = SessionHistoryAdapter(sessionList)
+        rvHistory.layoutManager = LinearLayoutManager(this)
+        rvHistory.adapter = adapter
+
+        startHistorySync()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyProgrammaticTheme()
+    }
+
+    private fun applyProgrammaticTheme() {
+        val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+        val isDarkMode = prefs.getBoolean("dark_mode", true)
+
+        val root = findViewById<View>(R.id.historyRoot)
+        val tvHeader = findViewById<TextView>(R.id.tvHistoryHeader)
+        val btnBackCard = findViewById<MaterialCardView>(R.id.btnBack)
+        val tvBackArrow = findViewById<TextView>(R.id.tvBackArrow)
+
+        if (isDarkMode) {
+            root?.setBackgroundColor(android.graphics.Color.parseColor("#121212"))
+            tvHeader?.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+            btnBackCard?.setCardBackgroundColor(android.graphics.Color.parseColor("#1E1E1E"))
+            btnBackCard?.setStrokeColor(android.graphics.Color.parseColor("#3C4043"))
+            tvBackArrow?.setTextColor(android.graphics.Color.parseColor("#FFFFFF"))
+        } else {
+            root?.setBackgroundColor(android.graphics.Color.parseColor("#F8F9FA"))
+            tvHeader?.setTextColor(android.graphics.Color.parseColor("#1F1F1F"))
+            btnBackCard?.setCardBackgroundColor(android.graphics.Color.parseColor("#FFFFFF"))
+            btnBackCard?.setStrokeColor(android.graphics.Color.parseColor("#DADCE0"))
+            tvBackArrow?.setTextColor(android.graphics.Color.parseColor("#1F1F1F"))
+        }
+    }
+
+    private fun startHistorySync() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        progressBar.visibility = View.VISIBLE
+
+        historyListener?.remove()
+        historyListener = FirebaseFirestore.getInstance().collection("DriveSessions")
+            .whereEqualTo("userId", uid)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, e ->
+                progressBar.visibility = View.GONE
+                if (e != null) {
+                    Log.e("History", "Sync failed", e)
+                    return@addSnapshotListener
+                }
+
+                if (snapshots != null) {
+                    sessionList.clear()
+                    for (doc in snapshots) {
+                        try {
+                            val session = DriveSession(
+                                id = doc.id,
+                                score = doc.getLong("score")?.toInt() ?: 0,
+                                duration = doc.getLong("duration")?.toInt() ?: 0,
+                                alerts = doc.getLong("alerts")?.toInt() ?: 0,
+                                dateString = doc.getString("dateString") ?: "Recent Session"
+                            )
+                            sessionList.add(session)
+                        } catch (ex: Exception) {
+                            Log.e("History", "Row error", ex)
+                        }
                     }
+                    
+                    adapter.notifyDataSetChanged()
+                    tvEmptyState.visibility = if (sessionList.isEmpty()) View.VISIBLE else View.GONE
                 }
             }
-            .addOnFailureListener {
-                progressBar?.visibility = View.GONE
-                AegisNotify.show(this, "Cloud Sync Failed", AegisNotify.Type.ERROR)
-            }
     }
 
-    private fun addSessionCard(container: LinearLayout, doc: com.google.firebase.firestore.DocumentSnapshot) {
-        val sessionNum = doc.get("sessionNumber") ?: "?"
-        val score = doc.getLong("score")?.toInt() ?: 0
-        val timestamp = doc.getString("timestamp") ?: "Unknown Date"
-        val alerts = doc.getLong("alerts")?.toInt() ?: 0
-        val duration = doc.getLong("duration")?.toInt() ?: 0
-
-        // Create Modern Card
-        val card = MaterialCardView(this).apply {
-            val params = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-            params.setMargins(0, 12, 0, 12)
-            layoutParams = params
-            radius = 40f
-            cardElevation = 0f
-            strokeWidth = 2
-            setStrokeColor(Color.parseColor("#333333"))
-            setCardBackgroundColor(Color.parseColor("#1E1E1E"))
-            isClickable = true
-            isFocusable = true
-        }
-
-        // Inner Content Layout
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(40, 40, 40, 40)
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val textLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        val title = TextView(this).apply {
-            text = "Session #$sessionNum"
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            setTypeface(null, Typeface.BOLD)
-        }
-
-        val date = TextView(this).apply {
-            text = timestamp
-            setTextColor(Color.parseColor("#A0A0A0"))
-            textSize = 12f
-        }
-
-        textLayout.addView(title)
-        textLayout.addView(date)
-
-        val scoreValue = TextView(this).apply {
-            text = "$score%"
-            setTextColor(getScoreColor(score))
-            textSize = 18f
-            setTypeface(null, Typeface.BOLD)
-        }
-
-        row.addView(textLayout)
-        row.addView(scoreValue)
-        card.addView(row)
-
-        // 🚀 DETAIL VIEW ON CLICK
-        card.setOnClickListener {
-            showSessionDetails(sessionNum, timestamp, score, alerts, duration)
-        }
-
-        container.addView(card)
-    }
-
-    private fun showSessionDetails(num: Any, date: String, score: Int, alerts: Int, duration: Int) {
-        val hours = duration / 3600
-        val mins = (duration % 3600) / 60
-        val secs = duration % 60
-        val timeFormatted = if (hours > 0) "${hours}h ${mins}m ${secs}s" else "${mins}m ${secs}s"
-
-        val level = when {
-            score >= 90 -> "Elite"
-            score >= 80 -> "Professional"
-            score >= 70 -> "Expert"
-            score >= 60 -> "Standard"
-            score >= 50 -> "Moderate"
-            else -> "Critical"
-        }
-
+    private fun confirmWipeHistory() {
         MaterialAlertDialogBuilder(this)
-            .setTitle("SESSION ANALYSIS #$num")
-            .setMessage("""
-                📅 DATE: $date
-                ⏱ DURATION: $timeFormatted
-                ⚠ ALERTS FIRED: $alerts
-                🎯 SAFETY SCORE: $score%
-                🏆 STATUS: $level Level
-            """.trimIndent())
-            .setNegativeButton("CLOSE", null)
+            .setTitle("Wipe Intelligence History?")
+            .setMessage("This will permanently delete all your driving logs. This cannot be undone.")
+            .setPositiveButton("WIPE EVERYTHING") { _, _ -> performWipe() }
+            .setNegativeButton("CANCEL", null)
             .show()
     }
 
-    private fun showEmptyState(container: LinearLayout?) {
-        val tv = TextView(this).apply {
-            text = "No driving logs found."
-            setTextColor(Color.GRAY)
-            gravity = Gravity.CENTER
-            setPadding(0, 100, 0, 0)
-        }
-        container?.addView(tv)
+    private fun performWipe() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("DriveSessions")
+            .whereEqualTo("userId", uid)
+            .get()
+            .addOnSuccessListener { snapshots ->
+                val batch = db.batch()
+                for (doc in snapshots) batch.delete(doc.reference)
+                db.collection("SystemAnalytics").document(uid).delete()
+                batch.commit().addOnSuccessListener {
+                    AegisNotify.show(this, "Intelligence History Wiped", AegisNotify.Type.SUCCESS)
+                }
+            }
     }
 
-    private fun getScoreColor(score: Int): Int {
-        return when {
-            score > 75 -> Color.parseColor("#6ABF69")
-            score > 45 -> Color.parseColor("#FFB74D")
-            else -> Color.parseColor("#EF5350")
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        historyListener?.remove()
     }
 }

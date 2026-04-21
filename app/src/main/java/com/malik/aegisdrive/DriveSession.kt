@@ -1,12 +1,11 @@
 package com.malik.aegisdrive
 
 data class DriveSession(
-    val sessionId: String = "",
-    val driverUid: String = "",
-    val startTime: Long = 0,
-    val endTime: Long = 0,
-    val durationSeconds: Int = 0,
-    val averageSafetyScore: Int = 0,
-    val alertCount: Int = 0,
-    val maxDrowsinessLevel: String = "None"
+    val id: String = "",
+    val userId: String = "",
+    val score: Int = 0,
+    val duration: Int = 0,
+    val alerts: Int = 0,
+    val focusLevel: Int = 0,
+    val dateString: String = ""
 )

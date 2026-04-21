@@ -1,10 +1,12 @@
 package com.malik.aegisdrive
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import com.google.firebase.FirebaseApp
@@ -18,16 +20,22 @@ class SplashActivity : AppCompatActivity() {
     private val TAG = "SplashActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 🚀 CRITICAL FIX: installSplashScreen() MUST be called BEFORE super.onCreate()
+        // 🚀 CRITICAL FIX 1: BREAK INFINITE RECREATION LOOP
+        val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+        val isDarkMode = prefs.getBoolean("dark_mode", true)
+        val targetMode = if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+
+        if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
+            AppCompatDelegate.setDefaultNightMode(targetMode)
+        }
+
+        // installSplashScreen() MUST be called BEFORE super.onCreate()
         val splashScreen = installSplashScreen()
         
         super.onCreate(savedInstanceState)
         
-        // CRITICAL FIX 3: Re-introducing fallback XML layout to prevent native splash hangs
+        // Re-introducing fallback XML layout to prevent native splash hangs
         setContentView(R.layout.activity_splash)
-
-        // Remove setKeepOnScreenCondition { true } to allow transition to activity_splash
-        // This ensures the user sees something even if the routing logic is delayed.
 
         // Use lifecycleScope for crash-proof threading
         lifecycleScope.launch {

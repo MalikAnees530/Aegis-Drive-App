@@ -1,29 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 🚀 Premium Android 12+ Native Splash Theme -->
-    <!-- CRITICAL: postSplashScreenTheme must match the updated Material 3 theme -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/bg_navy</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_aegis_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.AegisDrive</item>
     </style>
 
-    <!-- Base application theme (Modern Material 3) -->
-    <!-- CRITICAL FIX 1: Use Theme.Material3 for all components compatibility -->
+    <!-- ══ CRITICAL FIX: TRUE LIGHT MODE MATERIAL 3 THEME ══ -->
     <style name="Theme.AegisDrive" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Main Palette (Light Mode) -->
         <item name="colorPrimary">@color/aegis_blue</item>
-        <item name="android:windowBackground">@color/bg_navy</item>
-        <item name="android:statusBarColor">@color/bg_navy</item>
-        <item name="android:navigationBarColor">@color/bg_navy</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#E0F2FE</item>
+        <item name="colorOnPrimaryContainer">@color/bg_navy</item>
+        
+        <!-- Background & Surface (Light Mode) -->
+        <item name="android:windowBackground">#F8FAFC</item>
+        <item name="colorSurface">#FFFFFF</item>
+        <item name="colorOnSurface">#0F172A</item>
+        <item name="colorSurfaceVariant">#F1F5F9</item>
+        <item name="colorOnSurfaceVariant">#64748B</item>
+        <item name="colorOutline">#CBD5E1</item>
+
+        <!-- Status & Navigation Bars -->
+        <item name="android:statusBarColor">#F8FAFC</item>
+        <item name="android:navigationBarColor">#F8FAFC</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
         
         <!-- Component Styles -->
         <item name="materialCardViewStyle">@style/AegisDrive.CardView</item>
+        <item name="textInputStyle">@style/AegisDrive.TextInputLayout</item>
     </style>
 
+    <!-- ══ Component Style Overrides (Light Mode) ══ -->
     <style name="AegisDrive.CardView" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardBackgroundColor">@color/bg_navy_light</item>
-        <item name="cardCornerRadius">16dp</item>
+        <item name="cardBackgroundColor">#FFFFFF</item>
+        <item name="cardCornerRadius">24dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">#E2E8F0</item>
+    </style>
+
+    <style name="AegisDrive.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxStrokeColor">#94A3B8</item>
+        <item name="boxBackgroundColor">#FFFFFF</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="hintTextColor">@color/aegis_blue</item>
     </style>
 
     <style name="CustomDialogTheme" parent="Theme.Material3.DayNight.Dialog">

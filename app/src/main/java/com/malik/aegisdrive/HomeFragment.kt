@@ -5,18 +5,19 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.util.Calendar
@@ -25,63 +26,148 @@ import java.util.Locale
 @SuppressLint("SetTextI18n", "CommitPrefEdits")
 class HomeFragment : Fragment() {
 
-    private val sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-        if (isAdded && view != null) {
-            // 🚀 SYNC: Listen for real-time score or session-end triggers
-            val keysToWatch = listOf("LAST_SCORE", "TOTAL_ALERTS", "DRIVE_SECONDS", "TOTAL_SESSIONS")
-            if (keysToWatch.contains(key)) {
-                activity?.runOnUiThread {
-                    view?.let { syncDashboardData(it) }
-                }
-            }
-        }
-    }
+    private val TAG = "HomeFragment"
+    private var profileListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var sessionListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var latestSessionId: String = ""
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_home, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupClickListeners(view)
-        checkAIModelStatus(view)
         
-        // 🚀 ACTIVATE REAL-TIME SYNC
-        requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-            .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
+        try {
+            setupClickListeners(view)
+            checkAIModelStatus(view)
+            startRealTimeSync(view)
+        } catch (e: Exception) {
+            Log.e(TAG, "onViewCreated failed", e)
+        }
+    }
+
+    private fun startRealTimeSync(view: View) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        // 🚀 LISTENER 1: REAL-TIME PROFILE GREETING (Lowercase 'users')
+        profileListener?.remove()
+        profileListener = db.collection("users").document(uid).addSnapshotListener { snapshot, e ->
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e)
+                return@addSnapshotListener
+            }
+            if (snapshot != null && snapshot.exists() && isAdded) {
+                val name = snapshot.getString("name") ?: "Operator"
+                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val greeting = when (hour) {
+                    in 0..11 -> "Good Morning"
+                    in 12..16 -> "Good Afternoon"
+                    in 17..20 -> "Good Evening"
+                    else -> "Good Night"
+                }
+                activity?.runOnUiThread {
+                    view.findViewById<TextView>(R.id.tvGreeting)?.text = "$greeting, $name"
+                }
+            }
+        }
+
+        // 🚀 LISTENER 2: RECENT DRIVE METRICS & INDEX ERROR CATCH
+        sessionListener?.remove()
+        sessionListener = db.collection("DriveSessions")
+            .whereEqualTo("userId", uid)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) {
+                    if (e is com.google.firebase.firestore.FirebaseFirestoreException && 
+                        e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION) {
+                        Log.e("Aegis_CRITICAL", "MISSING INDEX: Build it here -> ${e.message}")
+                    }
+                    return@addSnapshotListener
+                }
+
+                if (snapshots != null && isAdded) {
+                    if (snapshots.isEmpty) {
+                        activity?.runOnUiThread {
+                            updateUIComponents(view, 0, 0, 0, "No driving history", 0, 100.0)
+                        }
+                    } else {
+                        val docs = snapshots.documents
+                        val last = docs[0]
+                        latestSessionId = last.id // Capture for click listener
+                        
+                        try {
+                            val score = last.getLong("score")?.toInt() ?: 100
+                            val alerts = last.getLong("alerts")?.toInt() ?: 0
+                            val duration = last.getLong("duration")?.toInt() ?: 0
+                            val focus = last.getLong("focusLevel")?.toInt() ?: 100
+                            val date = last.getString("dateString") ?: "Recent Session"
+
+                            var totalScoreSum = 0
+                            for (doc in docs) {
+                                totalScoreSum += doc.getLong("score")?.toInt() ?: 0
+                            }
+                            val avgScore = totalScoreSum.toDouble() / docs.size
+
+                            activity?.runOnUiThread {
+                                updateUIComponents(view, score, alerts, duration, date, docs.size, avgScore)
+                            }
+                        } catch (ex: Exception) {
+                            Log.e("Aegis", "Data parse error", ex)
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun updateUIComponents(view: View, score: Int, alerts: Int, seconds: Int, date: String, sessionCount: Int, lifetimeSafety: Double) {
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        val s = seconds % 60
+        
+        val formattedDuration = if (h > 0) String.format(Locale.US, "%dh %dm %ds", h, m, s) else String.format(Locale.US, "%dm %ds", m, s)
+
+        view.findViewById<TextView>(R.id.tvScoreValue)?.text = score.toString()
+        view.findViewById<TextView>(R.id.tvDriveTimeValue)?.text = formattedDuration
+        view.findViewById<TextView>(R.id.tvAlertsValue)?.text = alerts.toString()
+        
+        val focusLevel = if (sessionCount > 0) (score - (alerts * 4)).coerceIn(0, 100) else 100
+        view.findViewById<TextView>(R.id.tvFocusValue)?.text = "$focusLevel%"
+        view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f%%", lifetimeSafety)
+
+        val tvHistoryTitle = view.findViewById<TextView>(R.id.tvHistoryTitle)
+        val tvHistoryDate = view.findViewById<TextView>(R.id.tvHistoryDate)
+        if (sessionCount > 0) {
+            tvHistoryTitle?.text = "Session $sessionCount: $score%"
+            tvHistoryDate?.text = date
+        } else {
+            tvHistoryTitle?.text = "No Recent Sessions"
+            tvHistoryDate?.text = "Complete a drive to see data."
+        }
+
+        val colorHex = when {
+            sessionCount == 0 -> "#94A3B8"
+            score > 75 -> "#6ABF69"
+            score > 45 -> "#FFB74D"
+            else       -> "#EF5350"
+        }
+        val parsedColor = colorHex.toColorInt()
+        view.findViewById<TextView>(R.id.tvScoreValue)?.setTextColor(parsedColor)
+        val pb = view.findViewById<ProgressBar>(R.id.scoreProgress)
+        pb?.progress = if (sessionCount == 0) 0 else score
+        pb?.progressTintList = ColorStateList.valueOf(parsedColor)
+
+        val tvStatus = view.findViewById<TextView>(R.id.tvStatusText)
+        tvStatus?.text = if (sessionCount == 0) "NEW" else if (score > 75) "SAFE" else if (score > 45) "WARNING" else "DANGER"
+        tvStatus?.setTextColor(parsedColor)
+        view.findViewById<View>(R.id.statusIndicator)?.backgroundTintList = ColorStateList.valueOf(parsedColor)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-            .unregisterOnSharedPreferenceChangeListener(sharedPrefsListener)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        view?.let {
-            updateGreeting(it)
-            syncDashboardData(it)
-        }
-    }
-
-    private fun updateGreeting(view: View) {
-        val tvGreeting = view.findViewById<TextView>(R.id.tvGreeting)
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        val greetingTime = when (hour) {
-            in 5..11 -> "Good Morning"
-            in 12..16 -> "Good Afternoon"
-            in 17..20 -> "Good Evening"
-            else -> "Good Night"
-        }
-        
-        val prefs = requireActivity().getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-        val userName = prefs.getString("user_name", "Driver")?.split(" ")?.get(0) ?: "Driver"
-        tvGreeting?.text = "$greetingTime, $userName"
+        profileListener?.remove()
+        sessionListener?.remove()
     }
 
     private fun checkAIModelStatus(view: View) {
@@ -101,120 +187,9 @@ class HomeFragment : Fragment() {
                 tvAIStatus?.setTextColor("#EF5350".toColorInt())
                 tvAIStatusMessage?.text = "Models Missing"
             }
-        } catch (_: Exception) {
-            tvAIStatus?.text = "ERROR"
-            tvAIStatus?.setTextColor("#EF5350".toColorInt())
+        } catch (e: Exception) {
+            Log.e(TAG, "AI Model check failed", e)
         }
-    }
-
-    private fun syncDashboardData(view: View) {
-        val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-
-        val lastScore = prefs.getInt("LAST_SCORE", 100)
-        val totalAlerts = prefs.getInt("TOTAL_ALERTS", 0)
-        val driveSeconds = prefs.getInt("DRIVE_SECONDS", 0)
-        val lastDriveDate = prefs.getString("LAST_DRIVE_DATE", "No recent sessions") ?: "No recent sessions"
-        val totalSessions = prefs.getInt("TOTAL_SESSIONS", 0)
-        
-        // 🚀 SYNC: Distinct Logic for Safety vs Focus
-        val totalScoreSum = prefs.getInt("TOTAL_SCORE_SUM", 0)
-        val lifetimeSafetyAvg = if (totalSessions > 0) totalScoreSum.toDouble() / totalSessions else 100.0
-
-        // 🚀 CLOUD RECOVERY: Only if local is empty
-        if (totalSessions == 0) {
-            fetchLatestFromCloud(view)
-        } else {
-            updateUIComponents(view, lastScore, totalAlerts, driveSeconds, lastDriveDate, totalSessions, lifetimeSafetyAvg)
-        }
-    }
-
-    private fun updateUIComponents(view: View, score: Int, alerts: Int, seconds: Int, date: String, sessionCount: Int, lifetimeSafety: Double) {
-        // 🚀 PRECISION LOGIC: High-Precision Duration Formatting (H, M, S)
-        val totalHours = seconds / 3600
-        val totalMinutes = (seconds % 3600) / 60
-        val totalSecs = seconds % 60
-        
-        val formattedDuration = when {
-            totalHours > 0 -> String.format(Locale.US, "%dh %dm %ds", totalHours, totalMinutes, totalSecs)
-            totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalSecs)
-            else -> String.format(Locale.US, "%ds", totalSecs)
-        }
-
-        // UI Mapping: Last Session Results
-        view.findViewById<TextView>(R.id.tvScoreValue)?.text = score.toString() // LAST SESSION SCORE
-        view.findViewById<TextView>(R.id.tvDriveTimeValue)?.text = formattedDuration // Last Drive Duration (Fixed Format)
-        view.findViewById<TextView>(R.id.tvAlertsValue)?.text = alerts.toString() // Total Alerts Fired (This Session)
-        
-        // 🚀 FORMULA: Est. Focus Level (Quality of last session)
-        // We deduct 4% for every alert fired to represent true focus loss
-        val focusLevel = (score - (alerts * 4)).coerceIn(0, 100)
-        view.findViewById<TextView>(R.id.tvFocusValue)?.text = "$focusLevel%"
-
-        // 🚀 FORMULA: Safety Rating (Lifetime Reliability Average)
-        view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f%%", lifetimeSafety)
-
-        val tvHistoryTitle = view.findViewById<TextView>(R.id.tvHistoryTitle)
-        val tvHistoryDate = view.findViewById<TextView>(R.id.tvHistoryDate)
-        if (sessionCount > 0) {
-            tvHistoryTitle?.text = "Session $sessionCount: ${String.format(Locale.US, "%.1f%%", score.toDouble())}"
-            tvHistoryDate?.text = date
-        }
-
-        val colorHex = when {
-            score > 75 -> "#6ABF69"
-            score > 45 -> "#FFB74D"
-            else       -> "#EF5350"
-        }
-        val parsedColor = colorHex.toColorInt()
-        view.findViewById<TextView>(R.id.tvScoreValue)?.setTextColor(parsedColor)
-        val pb = view.findViewById<ProgressBar>(R.id.scoreProgress)
-        pb?.progress = score
-        pb?.progressTintList = ColorStateList.valueOf(parsedColor)
-
-        val tvStatus = view.findViewById<TextView>(R.id.tvStatusText)
-        tvStatus?.text = if (score > 75) "SAFE" else if (score > 45) "WARNING" else "DANGER"
-        tvStatus?.setTextColor(parsedColor)
-        view.findViewById<View>(R.id.statusIndicator)?.backgroundTintList = ColorStateList.valueOf(parsedColor)
-
-        val tvScoreSub = view.findViewById<TextView>(R.id.tvScoreSub)
-        tvScoreSub?.text = when {
-            score >= 90 -> "Elite Driving Level Detected."
-            score >= 80 -> "Professional Driving Level Detected."
-            score >= 70 -> "Expert Driving Level Detected."
-            score >= 60 -> "Standard Driving Level Detected."
-            score >= 50 -> "Moderate Safety Level Detected."
-            score >= 10 -> "Critical Safety Alert Detected!"
-            else        -> "Hazardous Driving Level Detected."
-        }
-    }
-
-    private fun fetchLatestFromCloud(view: View) {
-        val db = FirebaseFirestore.getInstance()
-        db.collection("DriveSessions")
-            .orderBy("dateObject", Query.Direction.DESCENDING)
-            .limit(1)
-            .get()
-            .addOnSuccessListener { docs ->
-                if (!docs.isEmpty) {
-                    val doc = docs.documents[0]
-                    val score = doc.getLong("score")?.toInt() ?: 100
-                    val alerts = doc.getLong("alerts")?.toInt() ?: 0
-                    val duration = doc.getLong("duration")?.toInt() ?: 0
-                    val date = doc.getString("timestamp") ?: "Recent Drive"
-                    val num = doc.getLong("sessionNumber")?.toInt() ?: 1
-
-                    val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-                    prefs.edit().apply {
-                        putInt("LAST_SCORE", score)
-                        putInt("TOTAL_ALERTS", alerts)
-                        putInt("DRIVE_SECONDS", duration)
-                        putString("LAST_DRIVE_DATE", date)
-                        putInt("TOTAL_SESSIONS", num)
-                        apply()
-                    }
-                    updateUIComponents(view, score, alerts, duration, date, num, score.toDouble())
-                }
-            }
     }
 
     private fun setupClickListeners(view: View) {
@@ -223,24 +198,32 @@ class HomeFragment : Fragment() {
             bottomNav?.selectedItemId = R.id.monitorFragment
         }
         view.findViewById<MaterialCardView>(R.id.btnSettings)?.setOnClickListener {
-            try { startActivity(Intent(requireContext(), SettingsActivity::class.java)) }
-            catch (_: Exception) { AegisNotify.show(requireContext(), "Opening Settings...", AegisNotify.Type.INFO) }
+            startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
         view.findViewById<MaterialCardView>(R.id.btnNotif)?.setOnClickListener {
-            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_security_logs, null)
-            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.CustomDialogTheme)
-                .setView(dialogView)
-                .create()
-
-            dialogView.findViewById<View>(R.id.btnConfirm)?.setOnClickListener {
-                dialog.dismiss()
+            try {
+                val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_security_logs, null)
+                val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.CustomDialogTheme)
+                    .setView(dialogView)
+                    .create()
+                dialogView.findViewById<View>(R.id.btnConfirm)?.setOnClickListener { dialog.dismiss() }
+                dialog.show()
+                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Notification dialog inflation failed", e)
             }
-
-            dialog.show()
-            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         }
         view.findViewById<TextView>(R.id.btnViewAllSessions)?.setOnClickListener {
             startActivity(Intent(requireContext(), SessionHistoryActivity::class.java))
+        }
+
+        // 🚀 WIRE LATEST SESSION CARD
+        view.findViewById<View>(R.id.cardRecentSession)?.setOnClickListener {
+            if (latestSessionId.isNotEmpty()) {
+                SessionDetailBottomSheet(latestSessionId).show(parentFragmentManager, "SessionDetail")
+            } else {
+                AegisNotify.show(requireContext(), "No session intelligence available.", AegisNotify.Type.INFO)
+            }
         }
     }
 }

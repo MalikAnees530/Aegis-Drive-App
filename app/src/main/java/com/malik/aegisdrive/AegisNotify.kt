@@ -1,6 +1,7 @@
 package com.malik.aegisdrive
 
 import android.content.Context
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -26,28 +27,30 @@ object AegisNotify {
 
         text.text = message
 
-        when (type) {
+        val color = when (type) {
             Type.SUCCESS -> {
                 icon.setImageResource(R.drawable.ic_check_circle)
-                icon.setColorFilter(ContextCompat.getColor(context, R.color.status_safe))
+                "#22C55E" // status_safe
             }
             Type.INFO -> {
                 icon.setImageResource(R.drawable.ic_info)
-                icon.setColorFilter(ContextCompat.getColor(context, R.color.accent_primary))
+                "#38BDF8" // accent_primary
             }
             Type.WARNING -> {
                 icon.setImageResource(R.drawable.ic_warning_modern)
-                icon.setColorFilter(ContextCompat.getColor(context, R.color.status_warning))
+                "#F59E0B" // status_warning
             }
             Type.ERROR -> {
                 icon.setImageResource(R.drawable.ic_warning_modern)
-                icon.setColorFilter(ContextCompat.getColor(context, R.color.status_danger))
+                "#EF5350" // status_danger
             }
             Type.SPEECH -> {
                 icon.setImageResource(R.drawable.ic_mic)
-                icon.setColorFilter(ContextCompat.getColor(context, R.color.accent_primary))
+                "#38BDF8" // accent_primary
             }
         }
+        
+        try { icon.setColorFilter(Color.parseColor(color)) } catch (e: Exception) {}
 
         with(Toast(context)) {
             duration = Toast.LENGTH_SHORT

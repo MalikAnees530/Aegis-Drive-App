@@ -1,6 +1,7 @@
 package com.malik.aegisdrive
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.auth.FirebaseAuth
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
@@ -330,46 +331,32 @@ class MonitorFragment : Fragment() {
 
     private fun stopMonitoring() {
         if (!isMonitoring) return
-
-        // 🚀 SYNC: Capture and Save Data before closing (Industry Standard)
+        
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val finalScore = safetyScore.toInt()
-        val finalAlerts = alertCount
-        val finalTime = elapsedSeconds
+        val totalAlerts = alertCount
+        val durationSeconds = elapsedSeconds
+        val focusLevel = (finalScore - (totalAlerts * 4)).coerceIn(0, 100)
 
-        try {
-            val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-            val formatter = SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault())
-            val currentTime = formatter.format(Date())
+        val sessionData = hashMapOf(
+            "userId" to uid,
+            "score" to finalScore,
+            "alerts" to totalAlerts,
+            "duration" to durationSeconds,
+            "focusLevel" to focusLevel,
+            "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+            "dateString" to java.text.SimpleDateFormat("MMM dd, yyyy - hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+        )
 
-            val currentSessionNumber = prefs.getInt("TOTAL_SESSIONS", 0) + 1
-            val cumulativeSeconds = prefs.getInt("TOTAL_DRIVE_TIME", 0) + finalTime
-            val cumulativeScoreSum = prefs.getInt("TOTAL_SCORE_SUM", 0) + finalScore
-
-            prefs.edit().apply {
-                putInt("LAST_SCORE", finalScore)
-                putInt("TOTAL_ALERTS", finalAlerts)
-                putInt("DRIVE_SECONDS", finalTime)
-                putString("LAST_DRIVE_DATE", currentTime)
-                putInt("TOTAL_SESSIONS", currentSessionNumber)
-                
-                // 🚀 CUMULATIVE STATS FOR SETTINGS
-                putInt("TOTAL_DRIVE_TIME", cumulativeSeconds)
-                putInt("TOTAL_SCORE_SUM", cumulativeScoreSum)
-                apply()
+        val db = FirebaseFirestore.getInstance()
+        db.collection("DriveSessions")
+            .add(sessionData)
+            .addOnSuccessListener { 
+                Log.d("Firebase", "DriveSession Saved") 
+                // 🚀 Update Global Lifetime Analytics
+                updateLifetimeAnalytics(uid, finalScore, durationSeconds)
             }
-
-            val db = FirebaseFirestore.getInstance()
-            val sessionData = hashMapOf(
-                "sessionNumber" to currentSessionNumber,
-                "score" to finalScore,
-                "alerts" to finalAlerts,
-                "duration" to finalTime,
-                "timestamp" to currentTime,
-                "dateObject" to com.google.firebase.Timestamp.now()
-            )
-            db.collection("DriveSessions").add(sessionData)
-
-        } catch (e: Exception) { Log.e(TAG, "Sync Failed: ${e.message}") }
+            .addOnFailureListener { e -> Log.e("Firebase", "WRITE FAILED: Check Security Rules", e) }
 
         isMonitoring = false
         timerHandler.removeCallbacks(timerRunnable)
@@ -377,6 +364,29 @@ class MonitorFragment : Fragment() {
         stopAudioAlarm()
         btnMuteAlarm.visibility = View.GONE
         faceOverlay.clear()
+    }
+
+    private fun updateLifetimeAnalytics(uid: String, sessionScore: Int, sessionDuration: Int) {
+        val db = FirebaseFirestore.getInstance()
+        val analyticsRef = db.collection("SystemAnalytics").document(uid)
+        
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(analyticsRef)
+            
+            val currentDrives = if (snapshot.exists()) snapshot.getLong("totalDrives") ?: 0L else 0L
+            val currentDuration = if (snapshot.exists()) snapshot.getLong("totalDuration") ?: 0L else 0L
+            val currentScoreSum = if (snapshot.exists()) snapshot.getLong("lifetimeScoreSum") ?: 0L else 0L
+            
+            val updates = mapOf(
+                "totalDrives" to currentDrives + 1,
+                "totalDuration" to currentDuration + sessionDuration,
+                "lifetimeScoreSum" to currentScoreSum + sessionScore
+            )
+            
+            transaction.set(analyticsRef, updates, com.google.firebase.firestore.SetOptions.merge())
+        }.addOnFailureListener { e ->
+            Log.e("AegisAnalytics", "Failed to update lifetime stats", e)
+        }
     }
 
     private fun setUIMonitoringState(isActive: Boolean) {

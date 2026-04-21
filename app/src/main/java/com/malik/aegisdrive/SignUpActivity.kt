@@ -82,7 +82,8 @@ class SignUpActivity : AppCompatActivity() {
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     val user = auth.currentUser
-                    user?.let {
+                    user?.let { authenticatedUser ->
+                        val uid = authenticatedUser.uid
                         // 🚀 SYNC: Create visible document in 'users' collection
                         val userMap = hashMapOf(
                             "name" to name,
@@ -93,9 +94,25 @@ class SignUpActivity : AppCompatActivity() {
                             "averageScore" to 100
                         )
 
-                        db.collection("users").document(it.uid)
+                        db.collection("users").document(uid)
                             .set(userMap)
                             .addOnSuccessListener {
+                                // 🚀 Initialize User-Specific Lifetime Analytics
+                                val initialAnalytics = mapOf(
+                                    "totalDrives" to 0,
+                                    "totalDuration" to 0,
+                                    "lifetimeScoreSum" to 0
+                                )
+                                db.collection("SystemAnalytics").document(uid).set(initialAnalytics)
+
+                                // PHASE 2: ENTERPRISE ANALYTICS - Increment global total_users
+                                db.collection("SystemAnalytics").document("counters")
+                                    .update("total_users", FieldValue.increment(1))
+                                    .addOnFailureListener {
+                                        db.collection("SystemAnalytics").document("counters")
+                                            .set(hashMapOf("total_users" to 1), com.google.firebase.firestore.SetOptions.merge())
+                                    }
+
                                 setLoading(false)
                                 AegisNotify.show(this, "Identity Initialized!", AegisNotify.Type.SUCCESS)
                                 startActivity(Intent(this, MainActivity::class.java))

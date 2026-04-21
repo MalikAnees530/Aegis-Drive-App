@@ -144,13 +144,13 @@ class ChatFragment : Fragment() {
             btnPlaySpeak.visibility = if (!isTtsSpeaking && lastAiResponse.isNotEmpty()) View.VISIBLE else View.GONE
 
             if (isVoiceMode) {
-                btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent_primary))
+                btnMic.setCardBackgroundColor(android.graphics.Color.parseColor("#38BDF8")) // Aegis Blue
                 ivMicIcon.setImageResource(if (isListening) R.drawable.ic_check_circle else R.drawable.ic_mic_modern)
-                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.bg_deepest))
+                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#0F172A"))
             } else {
-                btnMic.setCardBackgroundColor(ContextCompat.getColor(requireContext(), R.color.bg_elevated))
+                btnMic.setCardBackgroundColor(android.graphics.Color.parseColor("#1E293B")) // Surface Navy
                 ivMicIcon.setImageResource(R.drawable.ic_mic_modern)
-                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.accent_primary))
+                ivMicIcon.imageTintList = android.content.res.ColorStateList.valueOf(android.graphics.Color.parseColor("#38BDF8"))
             }
         }
     }
@@ -180,7 +180,9 @@ class ChatFragment : Fragment() {
 
     private fun sendMessage(text: String, fromVoice: Boolean = false) {
         if (currentSession.messages.isEmpty()) {
-            currentSession.name = if (text.length > 22) text.substring(0, 20) + "..." else text
+            val timestamp = java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+            val snippet = if (text.length > 18) text.substring(0, 16) + "..." else text
+            currentSession.name = "$snippet ($timestamp)"
             if (!allSessions.contains(currentSession)) allSessions.add(0, currentSession)
             renderSessionList()
         }
@@ -232,14 +234,21 @@ class ChatFragment : Fragment() {
             val card = MaterialCardView(requireContext()).apply {
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply { setMargins(0, 0, 0, dpToPx(10)) }
                 radius = dpToPx(16).toFloat(); cardElevation = if (isSelected) 4f else 0f
-                strokeColor = resources.getColor(if (isSelected) R.color.accent_primary else R.color.border_subtle, null)
+                strokeColor = android.graphics.Color.parseColor(if (isSelected) "#38BDF8" else "#334155")
                 strokeWidth = if (isSelected) dpToPx(2) else dpToPx(1)
-                setCardBackgroundColor(if (isSelected) resources.getColor(R.color.bg_elevated, null) else android.graphics.Color.TRANSPARENT)
+                setCardBackgroundColor(if (isSelected) android.graphics.Color.parseColor("#1E293B") else android.graphics.Color.TRANSPARENT)
             }
             val layout = LinearLayout(requireContext()).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(dpToPx(16), dpToPx(12), dpToPx(12), dpToPx(12)) }
             val icon = TextView(requireContext()).apply { text = "🛡️"; textSize = 16f; setPadding(0, 0, dpToPx(14), 0) }
-            val tv = TextView(requireContext()).apply { text = session.name; setTextColor(resources.getColor(R.color.text_primary, null)); textSize = 14f; typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
-            val btnOpt = TextView(requireContext()).apply { text = "⋮"; setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f); setTextColor(resources.getColor(R.color.text_disabled, null)); setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5)); setOnClickListener { showSessionMenu(it, session) } }
+            
+            // RESTORE DYNAMIC THEMING
+            val tv = TextView(requireContext()).apply { 
+                text = session.name; 
+                setTextColor(android.graphics.Color.parseColor(if (isSelected) "#FFFFFF" else "#94A3B8"))
+                textSize = 14f; typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) 
+            }
+            
+            val btnOpt = TextView(requireContext()).apply { text = "⋮"; setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f); setTextColor(android.graphics.Color.parseColor("#64748B")); setPadding(dpToPx(10), dpToPx(5), dpToPx(10), dpToPx(5)); setOnClickListener { showSessionMenu(it, session) } }
             layout.addView(icon); layout.addView(tv); layout.addView(btnOpt); card.addView(layout)
             card.setOnClickListener { currentSession = session; renderCurrentSession(); renderSessionList(); drawerLayout.closeDrawer(GravityCompat.START) }
             sessionsContainer.addView(card)
@@ -255,16 +264,18 @@ class ChatFragment : Fragment() {
     private fun deleteAllSessions() { allSessions.clear(); startNewChat(); saveSessions(); renderSessionList(); AegisNotify.show(requireContext(), "History wiped.", AegisNotify.Type.SUCCESS) }
 
     private fun saveSessions() {
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
         val array = JSONArray()
         for (s in allSessions) {
             val obj = JSONObject().apply { put("id", s.id); put("name", s.name); val msgs = JSONArray(); for (m in s.messages) msgs.put(JSONObject().apply { put("r", m.first); put("c", m.second) }); put("msgs", msgs) }
             array.put(obj)
         }
-        requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE).edit().putString("SESSIONS_JSON", array.toString()).apply()
+        requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE).edit().putString("SESSIONS_JSON_$uid", array.toString()).apply()
     }
 
     private fun loadSessions() {
-        val json = requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE).getString("SESSIONS_JSON", null) ?: return
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
+        val json = requireActivity().getSharedPreferences("AegisChat", Context.MODE_PRIVATE).getString("SESSIONS_JSON_$uid", null) ?: return
         try {
             val array = JSONArray(json); allSessions.clear()
             for (i in 0 until array.length()) {
@@ -308,23 +319,43 @@ class ChatFragment : Fragment() {
 
     private fun addUserMessage(text: String, scroll: Boolean = true) {
         val container = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL; gravity = android.view.Gravity.END; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { setMargins(0, 0, 0, dpToPx(16)) } }
-        val card = MaterialCardView(requireContext()).apply { setCardBackgroundColor(resources.getColor(R.color.accent_primary, null)); radius = dpToPx(20).toFloat(); cardElevation = 4f; layoutParams = LinearLayout.LayoutParams(-2, -2) }
-        val tv = TextView(requireContext()).apply { this.text = text; setTextColor(resources.getColor(R.color.bg_deepest, null)); setPadding(dpToPx(18), dpToPx(12), dpToPx(18), dpToPx(12)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); maxWidth = dpToPx(280); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL) }
+        val card = MaterialCardView(requireContext()).apply { 
+            setCardBackgroundColor(android.graphics.Color.parseColor("#38BDF8")) // Aegis Blue
+            radius = dpToPx(20).toFloat(); cardElevation = 4f; layoutParams = LinearLayout.LayoutParams(-2, -2) 
+        }
+        val tv = TextView(requireContext()).apply { 
+            this.text = text; 
+            setTextColor(android.graphics.Color.parseColor("#0F172A")) // Deep Navy Text
+            setPadding(dpToPx(18), dpToPx(12), dpToPx(18), dpToPx(12)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); maxWidth = dpToPx(280); typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL) 
+        }
         card.addView(tv); container.addView(card); chatMessagesContainer.addView(container)
         if (scroll) scrollToBottom()
     }
 
     private fun addAiMessage(text: String, scroll: Boolean = true) {
         val container = LinearLayout(requireContext()).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { setMargins(0, 0, 0, dpToPx(16)) } }
-        val card = MaterialCardView(requireContext()).apply { setCardBackgroundColor(resources.getColor(R.color.bg_surface, null)); radius = dpToPx(20).toFloat(); cardElevation = 0f; strokeColor = resources.getColor(R.color.border_subtle, null); strokeWidth = dpToPx(1); layoutParams = LinearLayout.LayoutParams(-2, -2) }
+        val card = MaterialCardView(requireContext()).apply { 
+            setCardBackgroundColor(android.graphics.Color.parseColor("#1E293B")) // Surface Navy
+            radius = dpToPx(20).toFloat(); cardElevation = 0f; 
+            strokeColor = android.graphics.Color.parseColor("#334155") // Outline
+            strokeWidth = dpToPx(1); layoutParams = LinearLayout.LayoutParams(-2, -2) 
+        }
         val formatted = text.replace("**", "<b>").replace("\n- ", "<br>• ").replace("\n", "<br>")
-        val tv = TextView(requireContext()).apply { this.text = Html.fromHtml(formatted, Html.FROM_HTML_MODE_COMPACT); setTextColor(resources.getColor(R.color.text_primary, null)); setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(14)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); maxWidth = dpToPx(300); movementMethod = LinkMovementMethod.getInstance(); typeface = Typeface.create("sans-serif", Typeface.NORMAL) }
+        val tv = TextView(requireContext()).apply { 
+            this.text = Html.fromHtml(formatted, Html.FROM_HTML_MODE_COMPACT); 
+            setTextColor(android.graphics.Color.parseColor("#FFFFFF")) // White Text
+            setPadding(dpToPx(20), dpToPx(14), dpToPx(20), dpToPx(14)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f); maxWidth = dpToPx(300); movementMethod = LinkMovementMethod.getInstance(); typeface = Typeface.create("sans-serif", Typeface.NORMAL) 
+        }
         card.addView(tv); container.addView(card); chatMessagesContainer.addView(container)
         if (scroll) scrollToBottom()
     }
 
     private fun addTypingIndicator(): View {
-        val tv = TextView(requireContext()).apply { text = "Synthesizing intelligence..."; setTextColor(resources.getColor(R.color.text_disabled, null)); setPadding(dpToPx(20), 0, 0, dpToPx(16)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f) }
+        val tv = TextView(requireContext()).apply { 
+            text = "Synthesizing intelligence..."; 
+            setTextColor(android.graphics.Color.parseColor("#94A3B8")) // Slate Text
+            setPadding(dpToPx(20), 0, 0, dpToPx(16)); setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f) 
+        }
         chatMessagesContainer.addView(tv); scrollToBottom(); return tv
     }
 

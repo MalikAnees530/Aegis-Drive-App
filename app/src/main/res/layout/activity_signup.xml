@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_navy"
+    android:background="#0F172A"
     android:fillViewport="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
             android:text="Create Identity"
-            android:textColor="@color/white"
+            android:textColor="#FFFFFF"
             android:textSize="32sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
@@ -39,7 +39,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="Register your credentials with Aegis"
-            android:textColor="@color/slate_text"
+            android:textColor="#94A3B8"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvHeader" />
@@ -51,26 +51,26 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
             android:hint="Full Name"
-            android:textColorHint="@color/slate_text"
-            app:boxBackgroundColor="@color/bg_navy_light"
+            android:textColorHint="#94A3B8"
+            app:boxBackgroundColor="#1E293B"
             app:boxCornerRadiusBottomEnd="16dp"
             app:boxCornerRadiusBottomStart="16dp"
             app:boxCornerRadiusTopEnd="16dp"
             app:boxCornerRadiusTopStart="16dp"
-            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeColor="#94A3B8"
             app:boxStrokeWidth="1dp"
             app:boxStrokeWidthFocused="2dp"
-            app:hintTextColor="@color/aegis_blue"
+            app:hintTextColor="#38BDF8"
             app:layout_constraintTop_toBottomOf="@+id/tvSubtitle"
             app:startIconDrawable="@drawable/ic_person"
-            app:startIconTint="@color/aegis_blue">
+            app:startIconTint="#38BDF8">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etFullName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPersonName"
-                android:textColor="@color/white" />
+                android:textColor="#FFFFFF" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -81,26 +81,26 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:hint="Email Address"
-            android:textColorHint="@color/slate_text"
-            app:boxBackgroundColor="@color/bg_navy_light"
+            android:textColorHint="#94A3B8"
+            app:boxBackgroundColor="#1E293B"
             app:boxCornerRadiusBottomEnd="16dp"
             app:boxCornerRadiusBottomStart="16dp"
             app:boxCornerRadiusTopEnd="16dp"
             app:boxCornerRadiusTopStart="16dp"
-            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeColor="#94A3B8"
             app:boxStrokeWidth="1dp"
             app:boxStrokeWidthFocused="2dp"
-            app:hintTextColor="@color/aegis_blue"
+            app:hintTextColor="#38BDF8"
             app:layout_constraintTop_toBottomOf="@+id/nameInputLayout"
             app:startIconDrawable="@drawable/ic_email"
-            app:startIconTint="@color/aegis_blue">
+            app:startIconTint="#38BDF8">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEmail"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textEmailAddress"
-                android:textColor="@color/white" />
+                android:textColor="#FFFFFF" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -111,28 +111,28 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:hint="Access Key"
-            android:textColorHint="@color/slate_text"
-            app:boxBackgroundColor="@color/bg_navy_light"
+            android:textColorHint="#94A3B8"
+            app:boxBackgroundColor="#1E293B"
             app:boxCornerRadiusBottomEnd="16dp"
             app:boxCornerRadiusBottomStart="16dp"
             app:boxCornerRadiusTopEnd="16dp"
             app:boxCornerRadiusTopStart="16dp"
-            app:boxStrokeColor="@color/slate_text"
+            app:boxStrokeColor="#94A3B8"
             app:boxStrokeWidth="1dp"
             app:boxStrokeWidthFocused="2dp"
             app:endIconMode="password_toggle"
-            app:endIconTint="@color/slate_text"
-            app:hintTextColor="@color/aegis_blue"
+            app:endIconTint="#94A3B8"
+            app:hintTextColor="#38BDF8"
             app:layout_constraintTop_toBottomOf="@+id/emailInputLayout"
             app:startIconDrawable="@drawable/ic_lock"
-            app:startIconTint="@color/aegis_blue">
+            app:startIconTint="#38BDF8">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPassword"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:inputType="textPassword"
-                android:textColor="@color/white" />
+                android:textColor="#FFFFFF" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -142,10 +142,10 @@
             android:layout_height="60dp"
             android:layout_marginTop="40dp"
             android:text="INITIALIZE IDENTITY"
-            android:textColor="@color/bg_navy"
+            android:textColor="#0F172A"
             android:textSize="16sp"
             android:textStyle="bold"
-            app:backgroundTint="@color/aegis_blue"
+            app:backgroundTint="#38BDF8"
             app:cornerRadius="16dp"
             app:layout_constraintTop_toBottomOf="@+id/passwordInputLayout" />
 
@@ -154,7 +154,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:visibility="gone"
-            android:indeterminateTint="@color/bg_navy"
+            android:indeterminateTint="#0F172A"
             app:layout_constraintBottom_toBottomOf="@+id/btnSignUp"
             app:layout_constraintEnd_toEndOf="@+id/btnSignUp"
             app:layout_constraintStart_toStartOf="@+id/btnSignUp"
@@ -166,7 +166,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:text="Already have an identity? Sign In"
-            android:textColor="@color/slate_text"
+            android:textColor="#94A3B8"
             android:textSize="14sp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"

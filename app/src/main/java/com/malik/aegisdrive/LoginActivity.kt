@@ -39,7 +39,12 @@ class LoginActivity : AppCompatActivity() {
         val etPassword = findViewById<TextInputEditText>(R.id.etPassword)
         btnLogin = findViewById(R.id.btnLogin)
         val btnSignUp = findViewById<TextView>(R.id.tvGoToSignUp)
+        val tvForgotPassword = findViewById<TextView>(R.id.tvForgotPassword)
         loginProgressBar = findViewById(R.id.loginProgressBar)
+
+        tvForgotPassword.setOnClickListener {
+            startActivity(Intent(this, ForgotPasswordActivity::class.java))
+        }
 
         btnLogin.setOnClickListener {
             emailLayout.error = null
@@ -85,6 +90,14 @@ class LoginActivity : AppCompatActivity() {
                         db.collection("users").document(it.uid)
                             .update("lastLogin", FieldValue.serverTimestamp())
                             .addOnSuccessListener {
+                                // PHASE 2: ENTERPRISE ANALYTICS - Increment active_logins_today
+                                db.collection("SystemAnalytics").document("counters")
+                                    .update("active_logins_today", FieldValue.increment(1))
+                                    .addOnFailureListener {
+                                        db.collection("SystemAnalytics").document("counters")
+                                            .set(hashMapOf("active_logins_today" to 1), com.google.firebase.firestore.SetOptions.merge())
+                                    }
+
                                 setLoading(false)
                                 startActivity(Intent(this, MainActivity::class.java))
                                 finish()
