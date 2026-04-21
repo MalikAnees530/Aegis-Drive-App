@@ -40,8 +40,16 @@ class SessionHistoryActivity : AppCompatActivity() {
         adapter = SessionHistoryAdapter(sessionList)
         rvHistory.layoutManager = LinearLayoutManager(this)
         rvHistory.adapter = adapter
+    }
 
+    override fun onStart() {
+        super.onStart()
         startHistorySync()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        historyListener?.remove()
     }
 
     override fun onResume() {

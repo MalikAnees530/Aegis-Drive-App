@@ -24,7 +24,9 @@ class SessionDetailBottomSheet(private val sessionId: String) : BottomSheetDialo
         applyProgrammaticTheme(view)
         view.findViewById<View>(R.id.btnCloseSheet).setOnClickListener { dismiss() }
 
-        FirebaseFirestore.getInstance().collection("DriveSessions").document(sessionId).get()
+        val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        FirebaseFirestore.getInstance().collection("users").document(uid)
+            .collection("drive_sessions").document(sessionId).get()
             .addOnSuccessListener { doc ->
                 if (doc.exists() && isAdded) {
                     val score = doc.getLong("score")?.toInt() ?: 0

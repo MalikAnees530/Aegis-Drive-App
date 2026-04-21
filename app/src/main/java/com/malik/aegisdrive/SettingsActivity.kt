@@ -27,12 +27,18 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var db: FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 🚀 SYNC: Ensure theme is applied before layout inflation
-        val settingsPrefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
-        val isDarkMode = settingsPrefs.getBoolean("dark_mode", true)
-        AppCompatDelegate.setDefaultNightMode(
-            if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-        )
+        // 🚀 CRITICAL FIX: BREAK INFINITE RECREATION LOOP
+        try {
+            val settingsPrefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+            val isDarkMode = settingsPrefs.getBoolean("dark_mode", true)
+            val targetMode = if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+
+            if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
+                AppCompatDelegate.setDefaultNightMode(targetMode)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to apply dark mode", e)
+        }
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
@@ -47,127 +53,41 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadUserData()
-        syncStatsFromCloud()
+        syncPreferences()
     }
 
-    private var statsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var prefListener: com.google.firebase.firestore.ListenerRegistration? = null
 
-    private fun syncStatsFromCloud() {
-        try {
-            val currentUser = auth.currentUser ?: return
-            
-            // PHASE 1: STRICT ISOLATION - Filter by userId
-            statsListener?.remove()
-            statsListener = db.collection("DriveSessions")
-                .whereEqualTo("userId", currentUser.uid)
-                .addSnapshotListener { documents, _ ->
-                    if (documents != null) {
-                        var totalSecs = 0
-                        var totalScore = 0
-                        var count = 0
+    private fun syncPreferences() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userRef = db.collection("users").document(uid)
 
-                        for (doc in documents) {
-                            val duration = doc.getLong("duration")?.toInt() ?: 0
-                            val score = doc.getLong("score")?.toInt() ?: 0
-                            
-                            totalSecs += duration
-                            totalScore += score
-                            count++
-                        }
-
-                        val dataPrefs = getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-                        dataPrefs.edit().apply {
-                            putInt("TOTAL_DRIVE_TIME", totalSecs)
-                            putInt("TOTAL_SCORE_SUM", totalScore)
-                            putInt("TOTAL_SESSIONS", count)
-                            apply()
-                        }
-                        updateStatsUI()
+        // 🚀 READ: Hydrate switches from Cloud Preferences map
+        prefListener?.remove()
+        prefListener = userRef.addSnapshotListener { doc, _ ->
+            if (doc != null && doc.exists()) {
+                val prefs = doc.get("preferences") as? Map<*, *>
+                
+                // Update UI on main thread safely
+                runOnUiThread {
+                    findViewById<SwitchMaterial>(R.id.switchDarkMode)?.apply {
+                        val isEnabled = prefs?.get("darkModeEnabled") as? Boolean ?: true
+                        if (isChecked != isEnabled) isChecked = isEnabled
+                    }
+                    findViewById<SwitchMaterial>(R.id.switchAlertSound)?.apply {
+                        val isEnabled = prefs?.get("audibleAlertsEnabled") as? Boolean ?: true
+                        if (isChecked != isEnabled) isChecked = isEnabled
+                    }
+                    findViewById<SwitchMaterial>(R.id.switchVibration)?.apply {
+                        val isEnabled = prefs?.get("hapticFeedbackEnabled") as? Boolean ?: true
+                        if (isChecked != isEnabled) isChecked = isEnabled
                     }
                 }
-        } catch (e: Exception) {
-            Log.e(TAG, "Stats sync failed", e)
+            }
         }
-    }
-
-    private var profileListener: com.google.firebase.firestore.ListenerRegistration? = null
-
-    private fun loadUserData() {
-        try {
-            val currentUser = auth.currentUser ?: return
-            
-            // Set email immediately from Auth
-            findViewById<TextView>(R.id.tvProfileEmail)?.text = currentUser.email ?: "No Email"
-
-            // 🚀 REAL-TIME SYNC: Listen for profile changes (Lowercase 'users')
-            profileListener?.remove()
-            profileListener = db.collection("users").document(currentUser.uid)
-                .addSnapshotListener { document, e ->
-                    if (e != null) {
-                        Log.w(TAG, "Listen failed.", e)
-                        return@addSnapshotListener
-                    }
-                    if (document != null && document.exists()) {
-                        val name = document.getString("name") ?: "Operator"
-                        findViewById<TextView>(R.id.tvProfileName)?.text = name
-                    }
-                }
-
-            // Load Local Avatar if exists
-            val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-            val imagePath = profilePrefs.getString("user_image_path", null)
-            val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
-            if (imagePath != null && ivAvatar != null) {
-                val file = File(imagePath)
-                if (file.exists()) {
-                    ivAvatar.setImageURI(Uri.fromFile(file))
-                }
-            }
-
-            updateStatsUI()
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Profile load failed", e)
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        profileListener?.remove()
-    }
-
-    private fun updateStatsUI() {
-        try {
-            val dataPrefs = getSharedPreferences("AegisData", Context.MODE_PRIVATE)
-            val totalDriveSeconds = dataPrefs.getInt("TOTAL_DRIVE_TIME", 0)
-            val totalScoreSum = dataPrefs.getInt("TOTAL_SCORE_SUM", 0)
-            val totalSessions = dataPrefs.getInt("TOTAL_SESSIONS", 0)
-
-            val avgSafetyPercent = if (totalSessions > 0) {
-                totalScoreSum.toDouble() / totalSessions 
-            } else {
-                100.0
-            }
-
-            val totalHours = totalDriveSeconds / 3600
-            val totalMinutes = (totalDriveSeconds % 3600) / 60
-            val totalSecs = totalDriveSeconds % 60
-            
-            val driveTimeText = when {
-                totalHours > 0 -> String.format(Locale.US, "%dh %dm", totalHours, totalMinutes)
-                totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalSecs)
-                else -> String.format(Locale.US, "%ds", totalSecs)
-            }
-            
-            findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
-            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", avgSafetyPercent)
-            findViewById<TextView>(R.id.tvStatTrips)?.text = totalSessions.toString()
-        } catch (e: Exception) { }
     }
 
     private fun setupDeleteAccount() {
-        // Long press on logo or a hidden area could trigger this, or add a button in XML
-        // For now, I'll attach it to the logout button's long click for security testing
         findViewById<View>(R.id.btnLogout)?.setOnLongClickListener {
             showDeleteAccountDialog()
             true
@@ -193,7 +113,7 @@ class SettingsActivity : AppCompatActivity() {
         db.collection("users").document(uid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    val data = document.data ?: return@addOnSuccessListener
+                    val data = document.data?.toMutableMap() ?: mutableMapOf<String, Any>()
                     data["deletedAt"] = FieldValue.serverTimestamp()
                     data["originalUid"] = uid
 
@@ -222,37 +142,109 @@ class SettingsActivity : AppCompatActivity() {
             }
     }
 
+    private var profileListener: com.google.firebase.firestore.ListenerRegistration? = null
+
+    private fun loadUserData() {
+        try {
+            val currentUser = auth.currentUser ?: return
+            
+            // Set email immediately from Auth
+            findViewById<TextView>(R.id.tvProfileEmail)?.text = currentUser.email ?: "No Email"
+
+            // 🚀 REAL-TIME SYNC: Listen for profile changes (Lowercase 'users')
+            profileListener?.remove()
+            profileListener = db.collection("users").document(currentUser.uid)
+                .addSnapshotListener { document, e ->
+                    if (e != null) {
+                        Log.w(TAG, "Listen failed.", e)
+                        return@addSnapshotListener
+                    }
+                    if (document != null && document.exists()) {
+                        val name = document.getString("displayName") ?: document.getString("name") ?: "Operator"
+                        findViewById<TextView>(R.id.tvProfileName)?.text = name
+
+                        updateStatsUI(document)
+                    }
+                }
+
+            // Load Local Avatar if exists
+            val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
+            val imagePath = profilePrefs.getString("user_image_path", null)
+            val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
+            if (imagePath != null && ivAvatar != null) {
+                val file = File(imagePath)
+                if (file.exists()) {
+                    ivAvatar.setImageURI(Uri.fromFile(file))
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Profile load failed", e)
+        }
+    }
+
+    private fun updateStatsUI(snapshot: com.google.firebase.firestore.DocumentSnapshot) {
+        try {
+            // Extract lifetimeStats safely from the hierarchical schema
+            val lifetimeStats = snapshot.get("lifetimeStats") as? Map<*, *>
+            val totalDriveSeconds = (lifetimeStats?.get("totalDriveTimeSeconds") as? Long) ?: 0L
+            val totalTrips = (lifetimeStats?.get("totalDrives") as? Long) ?: 0L
+            val avgSafetyScore = (lifetimeStats?.get("averageSafetyScore") as? Double) ?: 100.0
+
+            val totalHours = totalDriveSeconds / 3600
+            val totalMinutes = (totalDriveSeconds % 3600) / 60
+            
+            val driveTimeText = when {
+                totalHours > 0 -> String.format(Locale.US, "%dh %dm", totalHours, totalMinutes)
+                totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalDriveSeconds % 60)
+                else -> String.format(Locale.US, "%ds", totalDriveSeconds)
+            }
+            
+            findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
+            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", avgSafetyScore)
+            findViewById<TextView>(R.id.tvStatTrips)?.text = totalTrips.toString()
+        } catch (e: Exception) { 
+            Log.e(TAG, "Stats update failed", e)
+        }
+    }
+
     private fun setupListeners() {
         findViewById<View>(R.id.btnBack)?.setOnClickListener { finish() }
-
         findViewById<View>(R.id.editBtn)?.setOnClickListener {
-            startActivity(Intent(this, EditProfileActivity::class.java))
+            startActivity(Intent(this, EditProfileActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
         }
 
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userRef = db.collection("users").document(uid)
         val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
 
-        findViewById<SwitchMaterial>(R.id.switchAlertSound)?.apply {
-            isChecked = prefs.getBoolean("alert_sound", true)
-            setOnCheckedChangeListener { _, isChecked ->
+        // 🚀 WRITE: Two-way sync via dot notation
+        findViewById<SwitchMaterial>(R.id.switchAlertSound)?.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (buttonView.isPressed) { // Only fire on user interaction
+                userRef.update("preferences.audibleAlertsEnabled", isChecked)
                 prefs.edit().putBoolean("alert_sound", isChecked).apply()
             }
         }
 
-        findViewById<SwitchMaterial>(R.id.switchVibration)?.apply {
-            isChecked = prefs.getBoolean("vibration", true)
-            setOnCheckedChangeListener { _, isChecked ->
+        findViewById<SwitchMaterial>(R.id.switchVibration)?.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (buttonView.isPressed) {
+                userRef.update("preferences.hapticFeedbackEnabled", isChecked)
                 prefs.edit().putBoolean("vibration", isChecked).apply()
             }
         }
 
-        findViewById<SwitchMaterial>(R.id.switchDarkMode)?.apply {
-            isChecked = prefs.getBoolean("dark_mode", true)
-            setOnCheckedChangeListener { _, isChecked ->
+        findViewById<SwitchMaterial>(R.id.switchDarkMode)?.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (buttonView.isPressed) {
                 try {
+                    userRef.update("preferences.darkModeEnabled", isChecked)
                     prefs.edit().putBoolean("dark_mode", isChecked).apply()
-                    AppCompatDelegate.setDefaultNightMode(
-                        if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-                    )
+                    
+                    val targetMode = if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+                    if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
+                        AppCompatDelegate.setDefaultNightMode(targetMode)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Theme switch failed", e)
                 }
@@ -280,5 +272,11 @@ class SettingsActivity : AppCompatActivity() {
                 .setNegativeButton("CANCEL", null)
                 .show()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        profileListener?.remove()
+        prefListener?.remove()
     }
 }

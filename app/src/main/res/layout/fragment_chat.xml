@@ -146,14 +146,14 @@
                 app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="27dp"
                 app:cardElevation="8dp"
-                app:strokeColor="#EF5350"
+                app:strokeColor="?attr/colorError"
                 app:strokeWidth="2dp">
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_mic_off_modern"
-                    app:tint="#EF5350"/>
+                    app:tint="?attr/colorError"/>
             </com.google.android.material.card.MaterialCardView>
 
             <!-- Premium Modern Speak Orb -->
@@ -184,14 +184,14 @@
                 app:cardBackgroundColor="?attr/colorSurface"
                 app:cardCornerRadius="27dp"
                 app:cardElevation="8dp"
-                app:strokeColor="#EF5350"
+                app:strokeColor="?attr/colorError"
                 app:strokeWidth="2dp">
                 <ImageView
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_stop_modern"
-                    app:tint="#EF5350"/>
+                    app:tint="?attr/colorError"/>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 

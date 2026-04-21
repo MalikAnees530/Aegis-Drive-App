@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F172A"
+    android:background="?android:attr/windowBackground"
     android:orientation="vertical">
 
     <RelativeLayout
@@ -17,17 +17,17 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:layout_alignParentStart="true"
-            app:cardBackgroundColor="#1E293B"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
-            app:strokeColor="#334155"
+            app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1dp">
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="←"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
         </com.google.android.material.card.MaterialCardView>
         <TextView
@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="EDIT PROFILE"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
             android:textStyle="bold"
             android:letterSpacing="0.2"
@@ -65,10 +65,10 @@
                     android:id="@+id/btnChangeAvatar"
                     android:layout_width="120dp"
                     android:layout_height="120dp"
-                    app:cardBackgroundColor="#1E293B"
+                    app:cardBackgroundColor="?attr/colorSurface"
                     app:cardCornerRadius="60dp"
                     app:cardElevation="4dp"
-                    app:strokeColor="#38BDF8"
+                    app:strokeColor="?attr/colorPrimary"
                     app:strokeWidth="3dp"
                     android:clickable="true"
                     android:focusable="true">
@@ -94,7 +94,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Tap to change photo"
-                    android:textColor="#94A3B8"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp"
                     android:layout_marginTop="8dp"/>
             </LinearLayout>
@@ -104,7 +104,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="36dp"
                 android:text="DRIVER NAME"
-                android:textColor="#38BDF8"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -114,12 +114,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="8dp"
-                android:background="#1E293B"
+                android:background="?attr/colorSurface"
                 android:paddingHorizontal="16dp"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:hint="Enter your name"
-                android:textColorHint="#94A3B8"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:singleLine="true"/>
 
             <TextView
@@ -127,7 +127,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:text="EMAIL ADDRESS"
-                android:textColor="#38BDF8"
+                android:textColor="?attr/colorPrimary"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -137,9 +137,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="8dp"
-                android:background="#1E293B"
+                android:background="?attr/colorSurface"
                 android:paddingHorizontal="16dp"
-                android:textColor="#94A3B8"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="16sp"
                 android:gravity="center_vertical"
                 android:enabled="false"
@@ -152,16 +152,16 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="36dp"
                 android:text="SAVE CHANGES"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorOnPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                app:backgroundTint="#38BDF8"
+                app:backgroundTint="?attr/colorPrimary"
                 app:cornerRadius="16dp" />
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
-                android:background="#334155"
+                android:background="?attr/colorOutline"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="24dp"/>
 
@@ -169,7 +169,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="DANGER ZONE"
-                android:textColor="#EF4444"
+                android:textColor="?attr/colorError"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.15" />
@@ -180,11 +180,11 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="12dp"
                 android:text="DELETE ACCOUNT"
-                android:textColor="#EF4444"
+                android:textColor="?attr/colorError"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 app:backgroundTint="#1AEF5350"
-                app:strokeColor="#EF4444"
+                app:strokeColor="?attr/colorError"
                 app:strokeWidth="1dp"
                 app:cornerRadius="16dp" />
 

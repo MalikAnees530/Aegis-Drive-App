@@ -1,6 +1,7 @@
 package com.malik.aegisdrive.model
 
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.IgnoreExtraProperties
 
 @IgnoreExtraProperties
@@ -16,8 +17,8 @@ data class UserProfile(
 
 @IgnoreExtraProperties
 data class LifetimeStats(
-    val totalDrives: Int = 0,
-    val totalDriveTimeSeconds: Long = 0L,
+    val totalDrives: Long = 0,
+    val totalDriveTimeSeconds: Long = 0,
     val averageSafetyScore: Double = 100.0
 )
 

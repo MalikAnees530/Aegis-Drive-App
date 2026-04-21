@@ -4,7 +4,7 @@
     android:id="@+id/historyRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F172A"
+    android:background="?android:attr/windowBackground"
     android:orientation="vertical">
 
     <!-- ══ TOP HEADER ══ -->
@@ -21,10 +21,10 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:layout_alignParentStart="true"
-            app:cardBackgroundColor="#1E293B"
+            app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="14dp"
             app:cardElevation="0dp"
-            app:strokeColor="#334155"
+            app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1dp">
             <TextView
                 android:id="@+id/tvBackArrow"
@@ -32,7 +32,7 @@
                 android:layout_height="match_parent"
                 android:gravity="center"
                 android:text="←"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="20sp" />
         </com.google.android.material.card.MaterialCardView>
 
@@ -42,7 +42,7 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:text="DRIVING LOGS"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="14sp"
             android:textStyle="bold"
             android:letterSpacing="0.2"
@@ -55,7 +55,7 @@
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:text="WIPE"
-            android:textColor="#EF4444"
+            android:textColor="?attr/colorError"
             android:textSize="12sp"
             android:textStyle="bold"
             android:padding="8dp"
@@ -79,7 +79,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="No driving logs found."
-        android:textColor="#94A3B8"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:gravity="center"
         android:layout_marginTop="40dp"
         android:visibility="gone" />

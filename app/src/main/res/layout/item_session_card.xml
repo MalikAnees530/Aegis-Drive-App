@@ -7,10 +7,10 @@
     android:layout_height="wrap_content"
     android:layout_marginVertical="8dp"
     android:layout_marginHorizontal="2dp"
-    app:cardBackgroundColor="#1E293B"
+    app:cardBackgroundColor="?attr/colorSurface"
     app:cardCornerRadius="16dp"
     app:cardElevation="2dp"
-    app:strokeColor="#334155"
+    app:strokeColor="?attr/colorOutline"
     app:strokeWidth="1dp"
     android:clickable="true"
     android:focusable="true">
@@ -32,7 +32,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Session --"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorOnSurface"
                 android:textSize="16sp"
                 android:textStyle="bold" />
             <TextView
@@ -40,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Date --"
-                android:textColor="#94A3B8"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="12sp"
                 android:layout_marginTop="2dp" />
         </LinearLayout>
@@ -50,7 +50,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="--%"
-            android:textColor="#38BDF8"
+            android:textColor="?attr/colorPrimary"
             android:textSize="18sp"
             android:textStyle="bold" />
             
@@ -58,7 +58,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text=" →"
-            android:textColor="#334155"
+            android:textColor="?attr/colorOutline"
             android:textSize="18sp"
             android:textStyle="bold" />
     </LinearLayout>

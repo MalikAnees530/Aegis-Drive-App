@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -38,6 +39,19 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 🚀 CRITICAL FIX: BREAK INFINITE RECREATION LOOP
+        try {
+            val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
+            val isDarkMode = prefs.getBoolean("dark_mode", true)
+            val targetMode = if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+
+            if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
+                AppCompatDelegate.setDefaultNightMode(targetMode)
+            }
+        } catch (e: Exception) {
+            Log.e("EditProfile", "Failed to apply dark mode", e)
+        }
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_profile)
 

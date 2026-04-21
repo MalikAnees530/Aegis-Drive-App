@@ -41,49 +41,64 @@ class HomeFragment : Fragment() {
         try {
             setupClickListeners(view)
             checkAIModelStatus(view)
-            startRealTimeSync(view)
         } catch (e: Exception) {
             Log.e(TAG, "onViewCreated failed", e)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        view?.let { startRealTimeSync(it) }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        profileListener?.remove()
+        sessionListener?.remove()
     }
 
     private fun startRealTimeSync(view: View) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
 
-        // 🚀 LISTENER 1: REAL-TIME PROFILE GREETING (Lowercase 'users')
+        // 🚀 LISTENER 1: REAL-TIME PROFILE & GREETING
         profileListener?.remove()
         profileListener = db.collection("users").document(uid).addSnapshotListener { snapshot, e ->
             if (e != null) {
-                Log.w(TAG, "Listen failed.", e)
+                Log.w(TAG, "Profile sync failed.", e)
                 return@addSnapshotListener
             }
             if (snapshot != null && snapshot.exists() && isAdded) {
-                val name = snapshot.getString("name") ?: "Operator"
-                val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val displayName = snapshot.getString("displayName") ?: "Operator"
+                
+                // Extract lifetimeStats safely from the new schema
+                val lifetimeStats = snapshot.get("lifetimeStats") as? Map<*, *>
+                val avgSafetyScore = (lifetimeStats?.get("averageSafetyScore") as? Double) ?: 100.0
+
+                val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
                 val greeting = when (hour) {
                     in 0..11 -> "Good Morning"
                     in 12..16 -> "Good Afternoon"
                     in 17..20 -> "Good Evening"
                     else -> "Good Night"
                 }
+                
                 activity?.runOnUiThread {
-                    view.findViewById<TextView>(R.id.tvGreeting)?.text = "$greeting, $name"
+                    view.findViewById<TextView>(R.id.tvGreeting)?.text = "$greeting, $displayName"
+                    view.findViewById<TextView>(R.id.tvRatingValue)?.text = String.format(Locale.US, "%.1f%%", avgSafetyScore)
                 }
             }
         }
 
-        // 🚀 LISTENER 2: RECENT DRIVE METRICS & INDEX ERROR CATCH
+        // 🚀 LISTENER 2: LATEST DRIVE SESSION (Subcollection)
         sessionListener?.remove()
-        sessionListener = db.collection("DriveSessions")
-            .whereEqualTo("userId", uid)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
+        sessionListener = db.collection("users").document(uid)
+            .collection("drive_sessions")
+            .orderBy("startTime", Query.Direction.DESCENDING)
+            .limit(1)
             .addSnapshotListener { snapshots, e ->
                 if (e != null) {
-                    if (e is com.google.firebase.firestore.FirebaseFirestoreException && 
-                        e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION) {
-                        Log.e("Aegis_CRITICAL", "MISSING INDEX: Build it here -> ${e.message}")
-                    }
+                    Log.e(TAG, "Latest session sync failed.", e)
                     return@addSnapshotListener
                 }
 
@@ -95,23 +110,20 @@ class HomeFragment : Fragment() {
                     } else {
                         val docs = snapshots.documents
                         val last = docs[0]
-                        latestSessionId = last.id // Capture for click listener
+                        latestSessionId = last.id 
                         
                         try {
-                            val score = last.getLong("score")?.toInt() ?: 100
-                            val alerts = last.getLong("alerts")?.toInt() ?: 0
-                            val duration = last.getLong("duration")?.toInt() ?: 0
-                            val focus = last.getLong("focusLevel")?.toInt() ?: 100
-                            val date = last.getString("dateString") ?: "Recent Session"
-
-                            var totalScoreSum = 0
-                            for (doc in docs) {
-                                totalScoreSum += doc.getLong("score")?.toInt() ?: 0
-                            }
-                            val avgScore = totalScoreSum.toDouble() / docs.size
+                            val score = last.getLong("finalSafetyScore")?.toInt() ?: 100
+                            val alerts = last.getLong("totalAlertsFired")?.toInt() ?: 0
+                            val duration = last.getLong("durationSeconds")?.toInt() ?: 0
+                            val focus = last.getLong("estFocusLevel")?.toInt() ?: 100
+                            val dateObj = last.getTimestamp("startTime")?.toDate()
+                            val dateString = if (dateObj != null) 
+                                java.text.SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(dateObj)
+                                else "Recent Session"
 
                             activity?.runOnUiThread {
-                                updateUIComponents(view, score, alerts, duration, date, docs.size, avgScore)
+                                updateUIComponents(view, score, alerts, duration, dateString, snapshots.size(), 0.0) 
                             }
                         } catch (ex: Exception) {
                             Log.e("Aegis", "Data parse error", ex)
@@ -164,12 +176,6 @@ class HomeFragment : Fragment() {
         view.findViewById<View>(R.id.statusIndicator)?.backgroundTintList = ColorStateList.valueOf(parsedColor)
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-        profileListener?.remove()
-        sessionListener?.remove()
-    }
-
     private fun checkAIModelStatus(view: View) {
         val tvAIStatus = view.findViewById<TextView>(R.id.tvAIStatus)
         val tvAIStatusMessage = view.findViewById<TextView>(R.id.tvAIStatusMessage)
@@ -198,7 +204,9 @@ class HomeFragment : Fragment() {
             bottomNav?.selectedItemId = R.id.monitorFragment
         }
         view.findViewById<MaterialCardView>(R.id.btnSettings)?.setOnClickListener {
-            startActivity(Intent(requireContext(), SettingsActivity::class.java))
+            startActivity(Intent(requireContext(), SettingsActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
         }
         view.findViewById<MaterialCardView>(R.id.btnNotif)?.setOnClickListener {
             try {
@@ -214,7 +222,9 @@ class HomeFragment : Fragment() {
             }
         }
         view.findViewById<TextView>(R.id.btnViewAllSessions)?.setOnClickListener {
-            startActivity(Intent(requireContext(), SessionHistoryActivity::class.java))
+            startActivity(Intent(requireContext(), SessionHistoryActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            })
         }
 
         // 🚀 WIRE LATEST SESSION CARD

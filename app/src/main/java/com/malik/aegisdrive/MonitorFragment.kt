@@ -5,6 +5,7 @@ import com.google.firebase.auth.FirebaseAuth
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
@@ -333,29 +334,31 @@ class MonitorFragment : Fragment() {
         if (!isMonitoring) return
         
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val repository = com.malik.aegisdrive.repository.FirestoreRepository()
+        val finalScore = safetyScore.toInt()
+        val totalAlerts = alertCount
+        val durationSeconds = elapsedSeconds
+        val focusLevel = (finalScore - (totalAlerts * 4)).coerceIn(0, 100)
 
-        // 1. Construct Deep AI Metrics Map
-        val aiMetrics = com.malik.aegisdrive.model.AiEngineMetrics(
-            drowsyEventsDetected = this.closedEyeFrames / 5, // Event grouping logic
-            yawningEventsDetected = this.alertCount,
-            maxEyeClosureDurationMs = this.muteTimestamp
+        // 🚀 NEW HIERARCHICAL PAYLOAD
+        val sessionData = hashMapOf(
+            "score" to finalScore,
+            "alerts" to totalAlerts,
+            "duration" to durationSeconds,
+            "focusLevel" to focusLevel,
+            "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+            "startTime" to com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() - (elapsedSeconds * 1000))),
+            "dateString" to java.text.SimpleDateFormat("MMM dd, yyyy - hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
         )
 
-        // 2. Populate full DriveSession Object
-        val currentSession = com.malik.aegisdrive.model.DriveSession(
-            startTime = com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() - (elapsedSeconds * 1000))),
-            endTime = com.google.firebase.Timestamp.now(),
-            durationSeconds = elapsedSeconds.toLong(),
-            finalSafetyScore = safetyScore.toInt(),
-            estFocusLevel = (safetyScore - (alertCount * 2)).toInt().coerceIn(0, 100),
-            totalAlertsFired = alertCount,
-            aiEngineMetrics = aiMetrics,
-            appVersionAtTime = "v1.0-Release"
-        )
-
-        // 3. Atomically save session and update parent User stats
-        repository.saveDriveSession(uid, currentSession)
+        val db = FirebaseFirestore.getInstance()
+        // 🚀 WRITE TO SUBCOLLECTION: users/{uid}/drive_sessions
+        db.collection("users").document(uid).collection("drive_sessions")
+            .add(sessionData)
+            .addOnSuccessListener { 
+                Log.d("Firebase", "DriveSession Saved to Hierarchy") 
+                updateGlobalAnalytics(finalScore)
+            }
+            .addOnFailureListener { e -> Log.e("Firebase", "WRITE FAILED", e) }
 
         isMonitoring = false
         timerHandler.removeCallbacks(timerRunnable)
@@ -365,28 +368,37 @@ class MonitorFragment : Fragment() {
         faceOverlay.clear()
         
         AegisNotify.show(requireContext(), "Telemetry Synchronized", AegisNotify.Type.INFO)
+
+        // Navigate back to Home Dashboard
+        activity?.let {
+            val intent = Intent(it, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            }
+            startActivity(intent)
+        }
     }
 
-    private fun updateLifetimeAnalytics(uid: String, sessionScore: Int, sessionDuration: Int) {
+    private fun updateGlobalAnalytics(sessionScore: Int) {
         val db = FirebaseFirestore.getInstance()
-        val analyticsRef = db.collection("SystemAnalytics").document(uid)
+        // 🚀 BUG 2 FIX: Use daily_stats_yyyy_MM_dd for global aggregation
+        val dateId = java.text.SimpleDateFormat("daily_stats_yyyy_MM_dd", java.util.Locale.getDefault()).format(java.util.Date())
+        val analyticsRef = db.collection("SystemAnalytics").document(dateId)
         
         db.runTransaction { transaction ->
             val snapshot = transaction.get(analyticsRef)
             
-            val currentDrives = if (snapshot.exists()) snapshot.getLong("totalDrives") ?: 0L else 0L
-            val currentDuration = if (snapshot.exists()) snapshot.getLong("totalDuration") ?: 0L else 0L
-            val currentScoreSum = if (snapshot.exists()) snapshot.getLong("lifetimeScoreSum") ?: 0L else 0L
+            val totalSessions = (snapshot.getLong("totalSessionsLoggedToday") ?: 0L) + 1
+            val criticalAlerts = (snapshot.getLong("criticalAlertsTriggeredGlobally") ?: 0L) + (if (sessionScore < 50) 1 else 0)
             
             val updates = mapOf(
-                "totalDrives" to currentDrives + 1,
-                "totalDuration" to currentDuration + sessionDuration,
-                "lifetimeScoreSum" to currentScoreSum + sessionScore
+                "totalSessionsLoggedToday" to totalSessions,
+                "criticalAlertsTriggeredGlobally" to criticalAlerts,
+                "lastUpdated" to com.google.firebase.firestore.FieldValue.serverTimestamp()
             )
             
             transaction.set(analyticsRef, updates, com.google.firebase.firestore.SetOptions.merge())
         }.addOnFailureListener { e ->
-            Log.e("AegisAnalytics", "Failed to update lifetime stats", e)
+            Log.e("AegisAnalytics", "Global sync failed", e)
         }
     }
 
