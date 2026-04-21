@@ -333,30 +333,29 @@ class MonitorFragment : Fragment() {
         if (!isMonitoring) return
         
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val finalScore = safetyScore.toInt()
-        val totalAlerts = alertCount
-        val durationSeconds = elapsedSeconds
-        val focusLevel = (finalScore - (totalAlerts * 4)).coerceIn(0, 100)
+        val repository = com.malik.aegisdrive.repository.FirestoreRepository()
 
-        val sessionData = hashMapOf(
-            "userId" to uid,
-            "score" to finalScore,
-            "alerts" to totalAlerts,
-            "duration" to durationSeconds,
-            "focusLevel" to focusLevel,
-            "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-            "dateString" to java.text.SimpleDateFormat("MMM dd, yyyy - hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+        // 1. Construct Deep AI Metrics Map
+        val aiMetrics = com.malik.aegisdrive.model.AiEngineMetrics(
+            drowsyEventsDetected = this.closedEyeFrames / 5, // Event grouping logic
+            yawningEventsDetected = this.alertCount,
+            maxEyeClosureDurationMs = this.muteTimestamp
         )
 
-        val db = FirebaseFirestore.getInstance()
-        db.collection("DriveSessions")
-            .add(sessionData)
-            .addOnSuccessListener { 
-                Log.d("Firebase", "DriveSession Saved") 
-                // 🚀 Update Global Lifetime Analytics
-                updateLifetimeAnalytics(uid, finalScore, durationSeconds)
-            }
-            .addOnFailureListener { e -> Log.e("Firebase", "WRITE FAILED: Check Security Rules", e) }
+        // 2. Populate full DriveSession Object
+        val currentSession = com.malik.aegisdrive.model.DriveSession(
+            startTime = com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() - (elapsedSeconds * 1000))),
+            endTime = com.google.firebase.Timestamp.now(),
+            durationSeconds = elapsedSeconds.toLong(),
+            finalSafetyScore = safetyScore.toInt(),
+            estFocusLevel = (safetyScore - (alertCount * 2)).toInt().coerceIn(0, 100),
+            totalAlertsFired = alertCount,
+            aiEngineMetrics = aiMetrics,
+            appVersionAtTime = "v1.0-Release"
+        )
+
+        // 3. Atomically save session and update parent User stats
+        repository.saveDriveSession(uid, currentSession)
 
         isMonitoring = false
         timerHandler.removeCallbacks(timerRunnable)
@@ -364,6 +363,8 @@ class MonitorFragment : Fragment() {
         stopAudioAlarm()
         btnMuteAlarm.visibility = View.GONE
         faceOverlay.clear()
+        
+        AegisNotify.show(requireContext(), "Telemetry Synchronized", AegisNotify.Type.INFO)
     }
 
     private fun updateLifetimeAnalytics(uid: String, sessionScore: Int, sessionDuration: Int) {

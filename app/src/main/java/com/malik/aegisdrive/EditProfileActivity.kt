@@ -108,15 +108,23 @@ class EditProfileActivity : AppCompatActivity() {
     private fun saveProfile() {
         val newName = etName.text.toString().trim()
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        if (newName.isEmpty()) return
+        
+        if (newName.isEmpty()) {
+            AegisNotify.show(this, "Name cannot be empty", AegisNotify.Type.WARNING)
+            return
+        }
 
+        // 🚀 SAVE strictly to Firestore (Hierarchical Schema)
         FirebaseFirestore.getInstance().collection("users").document(uid)
-            .set(mapOf("name" to newName), com.google.firebase.firestore.SetOptions.merge())
-            .addOnSuccessListener { 
-                AegisNotify.show(this, "Profile Updated", AegisNotify.Type.SUCCESS)
-                finish() 
+            .update("displayName", newName)
+            .addOnSuccessListener {
+                AegisNotify.show(this, "Profile Saved Successfully", AegisNotify.Type.SUCCESS)
+                finish()
             }
-            .addOnFailureListener { e -> Log.e("Aegis", "Save failed", e) }
+            .addOnFailureListener { e ->
+                Log.e("AegisProfile", "Display name update failed", e)
+                AegisNotify.show(this, "Sync Error: ${e.localizedMessage}", AegisNotify.Type.ERROR)
+            }
     }
 
     private fun confirmAccountDeletion() {

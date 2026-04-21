@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
-class SessionHistoryAdapter(private val sessionList: List<DriveSession>) : 
+class SessionHistoryAdapter(private val sessionList: List<com.malik.aegisdrive.model.DriveSession>) : 
     RecyclerView.Adapter<SessionHistoryAdapter.ViewHolder>() {
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -32,8 +32,12 @@ class SessionHistoryAdapter(private val sessionList: List<DriveSession>) :
         val sessionNumber = sessionList.size - position 
         holder.tvSessionTitle.text = "Session $sessionNumber"
         
-        holder.tvSessionDate.text = session.dateString
-        holder.tvSessionScore.text = "${session.score}%"
+        // Use a formatted string from Timestamp
+        val date = session.startTime.toDate()
+        val dateString = java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(date)
+        
+        holder.tvSessionDate.text = dateString
+        holder.tvSessionScore.text = "${session.finalSafetyScore}%"
 
         // 🚀 THEME INJECTION
         val prefs = holder.itemView.context.getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)

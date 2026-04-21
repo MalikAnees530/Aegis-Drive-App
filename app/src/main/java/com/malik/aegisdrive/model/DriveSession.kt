@@ -5,9 +5,10 @@ import com.google.firebase.firestore.IgnoreExtraProperties
 
 @IgnoreExtraProperties
 data class DriveSession(
+    @get:com.google.firebase.firestore.Exclude var id: String = "", // Document ID Excluded from Firestore Map
     val sessionNumber: Int = 0,
-    val startTime: Timestamp = Timestamp.now(),
-    val endTime: Timestamp = Timestamp.now(),
+    val startTime: com.google.firebase.Timestamp = com.google.firebase.Timestamp.now(),
+    val endTime: com.google.firebase.Timestamp = com.google.firebase.Timestamp.now(),
     val durationSeconds: Long = 0L,
     val finalSafetyScore: Int = 0,
     val estFocusLevel: Int = 0,
