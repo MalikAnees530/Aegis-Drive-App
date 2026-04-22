@@ -2,9 +2,13 @@ package com.malik.aegisdrive
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -14,12 +18,14 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.ListenerRegistration
 import com.malik.aegisdrive.model.DriveSession
 
 @SuppressLint("SetTextI18n")
 class SessionHistoryActivity : AppCompatActivity() {
 
-    private var historyListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var historyListener: ListenerRegistration? = null
     private lateinit var rvHistory: RecyclerView
     private lateinit var tvEmptyState: TextView
     private lateinit var progressBar: ProgressBar
@@ -71,48 +77,52 @@ class SessionHistoryActivity : AppCompatActivity() {
         val cardBg = if (isDarkMode) "#1E1E1E" else "#FFFFFF"
         val strokeColor = if (isDarkMode) "#3C4043" else "#DADCE0"
 
-        root?.setBackgroundColor(android.graphics.Color.parseColor(bgColor))
-        tvHeader?.setTextColor(android.graphics.Color.parseColor(txtColor))
-        btnBackCard?.setCardBackgroundColor(android.graphics.Color.parseColor(cardBg))
-        btnBackCard?.setStrokeColor(android.graphics.Color.parseColor(strokeColor))
-        tvBackArrow?.setTextColor(android.graphics.Color.parseColor(txtColor))
+        root?.setBackgroundColor(Color.parseColor(bgColor))
+        tvHeader?.setTextColor(Color.parseColor(txtColor))
+        btnBackCard?.setCardBackgroundColor(Color.parseColor(cardBg))
+        btnBackCard?.setStrokeColor(Color.parseColor(strokeColor))
+        tvBackArrow?.setTextColor(Color.parseColor(txtColor))
     }
 
     private fun startHistorySync() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         progressBar.visibility = View.VISIBLE
 
-        // 🚀 Target the new private subcollection
+        // 🚀 INDEX-FREE SYNC: Flat Schema + Local Sort
         historyListener?.remove()
-        historyListener = FirebaseFirestore.getInstance().collection("users").document(uid)
-            .collection("drive_sessions")
-            .orderBy("startTime", com.google.firebase.firestore.Query.Direction.DESCENDING)
+        historyListener = FirebaseFirestore.getInstance().collection("DriveSessions")
+            .whereEqualTo("userId", uid)
             .addSnapshotListener { snapshots, e ->
                 progressBar.visibility = View.GONE
                 if (e != null) {
-                    Log.e("AegisHistory", "Subcollection read failed: ", e)
+                    Log.e("FIREBASE_CRASH", "History sync failed: ${e.message}")
                     return@addSnapshotListener
                 }
 
                 if (snapshots != null) {
-                    sessionList.clear()
-                    // Map documents to new DriveSession model (hierarchical)
-                    // We manually iterate to inject the Document ID into the model if needed
-                    // For the SessionHistoryAdapter to trigger the BottomSheet, it needs session.id
+                    val rawList = mutableListOf<DriveSession>()
                     for (doc in snapshots) {
                         try {
                             val session = doc.toObject(DriveSession::class.java)
                             if (session != null) {
-                                session.id = doc.id // Inject Document ID
-                                sessionList.add(session)
+                                session.id = doc.id
+                                rawList.add(session)
                             }
                         } catch (ex: Exception) {
                             Log.e("History", "Mapping error", ex)
                         }
                     }
                     
-                    adapter.notifyDataSetChanged()
-                    tvEmptyState.visibility = if (sessionList.isEmpty()) View.VISIBLE else View.GONE
+                    // 🚀 LOCAL SORTING: Guarantee order without Composite Index
+                    val sortedList = rawList.sortedByDescending { it.timestamp ?: it.startTime }
+                    
+                    sessionList.clear()
+                    sessionList.addAll(sortedList)
+                    
+                    runOnUiThread {
+                        adapter.notifyDataSetChanged()
+                        tvEmptyState.visibility = if (sessionList.isEmpty()) View.VISIBLE else View.GONE
+                    }
                 }
             }
     }
@@ -120,7 +130,7 @@ class SessionHistoryActivity : AppCompatActivity() {
     private fun confirmWipeHistory() {
         MaterialAlertDialogBuilder(this)
             .setTitle("Wipe Intelligence History?")
-            .setMessage("This will permanently delete all your driving logs. This cannot be undone.")
+            .setMessage("This will permanently delete all your driving logs from the cloud. This cannot be undone.")
             .setPositiveButton("WIPE EVERYTHING") { _, _ -> performWipe() }
             .setNegativeButton("CANCEL", null)
             .show()
@@ -130,19 +140,25 @@ class SessionHistoryActivity : AppCompatActivity() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val db = FirebaseFirestore.getInstance()
 
-        // Hierarchical Wipe: Delete from user subcollection
-        db.collection("users").document(uid).collection("drive_sessions").get()
+        // 🚀 TACTICAL WIPE: Target root collection sessions for this user
+        db.collection("DriveSessions").whereEqualTo("userId", uid).get()
             .addOnSuccessListener { snapshots ->
                 val batch = db.batch()
                 for (doc in snapshots) batch.delete(doc.reference)
                 
-                // Reset Lifetime Stats map
+                // Reset Lifetime Stats in user root
                 val userRef = db.collection("users").document(uid)
-                batch.update(userRef, "lifetimeStats", com.malik.aegisdrive.model.LifetimeStats())
+                batch.update(userRef, mapOf(
+                    "totalDrives" to 0L,
+                    "totalDuration" to 0L,
+                    "lifetimeScoreSum" to 0L
+                ))
                 
                 batch.commit().addOnSuccessListener {
                     AegisNotify.show(this, "Intelligence History Wiped", AegisNotify.Type.SUCCESS)
                 }
+            }.addOnFailureListener { e ->
+                Log.e("FIREBASE_CRASH", "Wipe failed: ${e.message}")
             }
     }
 

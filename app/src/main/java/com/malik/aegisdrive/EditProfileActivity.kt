@@ -17,6 +17,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,10 +27,10 @@ class EditProfileActivity : AppCompatActivity() {
     private lateinit var etName: EditText
     private lateinit var etEmailRead: EditText
     private var selectedImageUri: Uri? = null
+    private var profileListener: ListenerRegistration? = null
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
-            // 🚀 FIXED: Save the image locally immediately to avoid permission crashes
             val internalUri = saveImageToInternalStorage(uri)
             if (internalUri != null) {
                 selectedImageUri = internalUri
@@ -59,28 +60,30 @@ class EditProfileActivity : AppCompatActivity() {
         etName = findViewById(R.id.etName)
         etEmailRead = findViewById(R.id.etEmailRead)
 
-        loadCurrentProfile()
         setupListeners()
+        loadCurrentProfile()
     }
 
     private fun loadCurrentProfile() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         
-        // 🚀 FORCE SERVER FETCH to bypass stale local cache
-        FirebaseFirestore.getInstance().collection("users").document(uid)
-            .get(com.google.firebase.firestore.Source.SERVER)
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val name = document.getString("name") ?: ""
+        // 🚀 TACTICAL FIX: Prioritize 'name' field
+        profileListener?.remove()
+        profileListener = FirebaseFirestore.getInstance().collection("users").document(uid)
+            .addSnapshotListener { document, e ->
+                if (e != null) {
+                    Log.w("EditProfile", "Listen failed.", e)
+                    return@addSnapshotListener
+                }
+                if (document != null && document.exists()) {
+                    val name = document.getString("name") ?: document.getString("displayName") ?: ""
                     etName.setText(name)
                 }
             }
         
-        // Fetch current operator email
-        val currentUser = FirebaseAuth.getInstance().currentUser
-        etEmailRead.setText(currentUser?.email ?: "Not Authenticated")
+        etEmailRead.setText(FirebaseAuth.getInstance().currentUser?.email ?: "Not Authenticated")
 
-        // Load Local Avatar remains the same as it's a file path
+        // Load Local Avatar path
         val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
         val imagePath = profilePrefs.getString("user_image_path", null)
         if (imagePath != null) {
@@ -98,10 +101,6 @@ class EditProfileActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.btnDeleteAccount).setOnClickListener { confirmAccountDeletion() }
     }
 
-    /**
-     * 🚀 CRITICAL FIX: Copies the gallery image to the app's private folder.
-     * This prevents SecurityException crashes when loading the image later.
-     */
     private fun saveImageToInternalStorage(uri: Uri): Uri? {
         return try {
             val inputStream = contentResolver.openInputStream(uri) ?: return null
@@ -128,16 +127,16 @@ class EditProfileActivity : AppCompatActivity() {
             return
         }
 
-        // 🚀 SAVE strictly to Firestore (Hierarchical Schema)
+        // 🚀 UPDATE PIVOT: Target 'name' field specifically
         FirebaseFirestore.getInstance().collection("users").document(uid)
-            .update("displayName", newName)
+            .update("name", newName)
             .addOnSuccessListener {
-                AegisNotify.show(this, "Profile Saved Successfully", AegisNotify.Type.SUCCESS)
+                AegisNotify.show(this, "Aegis Profile Hydrated", AegisNotify.Type.SUCCESS)
                 finish()
             }
             .addOnFailureListener { e ->
-                Log.e("AegisProfile", "Display name update failed", e)
-                AegisNotify.show(this, "Sync Error: ${e.localizedMessage}", AegisNotify.Type.ERROR)
+                Log.e("FIREBASE_CRASH", "Profile update failed: ${e.message}")
+                AegisNotify.show(this, "Update Failed", AegisNotify.Type.ERROR)
             }
     }
 
@@ -151,17 +150,15 @@ class EditProfileActivity : AppCompatActivity() {
     }
 
     private fun deleteAccountData() {
-        val user = FirebaseAuth.getInstance().currentUser
+        val user = FirebaseAuth.getInstance().currentUser ?: return
         
-        user?.delete()?.addOnCompleteListener { task ->
+        user.delete().addOnCompleteListener { task ->
             if (task.isSuccessful) {
-                // 🚀 SYNC: Clear Local Data
+                // Clear Local Data
                 getSharedPreferences("AegisProfile", Context.MODE_PRIVATE).edit().clear().apply()
                 getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
                 getSharedPreferences("AegisSettings", Context.MODE_PRIVATE).edit().clear().apply()
-                val profileFile = File(filesDir, "profile_picture.jpg")
-                if (profileFile.exists()) profileFile.delete()
-
+                
                 // Firestore cleanup
                 FirebaseFirestore.getInstance().collection("users").document(user.uid).delete()
 

@@ -17,6 +17,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ListenerRegistration
 import java.io.File
 import java.util.Locale
 
@@ -25,6 +26,8 @@ class SettingsActivity : AppCompatActivity() {
     private val TAG = "SettingsActivity"
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
+    private var profileListener: ListenerRegistration? = null
+    private var prefListener: ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // 🚀 CRITICAL FIX: BREAK INFINITE RECREATION LOOP
@@ -56,10 +59,8 @@ class SettingsActivity : AppCompatActivity() {
         syncPreferences()
     }
 
-    private var prefListener: com.google.firebase.firestore.ListenerRegistration? = null
-
     private fun syncPreferences() {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = auth.currentUser?.uid ?: return
         val userRef = db.collection("users").document(uid)
 
         // 🚀 READ: Hydrate switches from Cloud Preferences map
@@ -68,7 +69,6 @@ class SettingsActivity : AppCompatActivity() {
             if (doc != null && doc.exists()) {
                 val prefs = doc.get("preferences") as? Map<*, *>
                 
-                // Update UI on main thread safely
                 runOnUiThread {
                     findViewById<SwitchMaterial>(R.id.switchDarkMode)?.apply {
                         val isEnabled = prefs?.get("darkModeEnabled") as? Boolean ?: true
@@ -109,7 +109,6 @@ class SettingsActivity : AppCompatActivity() {
         val user = auth.currentUser ?: return
         val uid = user.uid
 
-        // PHASE 2: SOFT-DELETE ARCHITECTURE
         db.collection("users").document(uid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
@@ -117,22 +116,17 @@ class SettingsActivity : AppCompatActivity() {
                     data["deletedAt"] = FieldValue.serverTimestamp()
                     data["originalUid"] = uid
 
-                    // Step 2: Archive to DeletedUserRecord
                     db.collection("DeletedUserRecord").add(data)
                         .addOnSuccessListener {
-                            // Step 3: Delete from active users
                             db.collection("users").document(uid).delete()
                                 .addOnSuccessListener {
-                                    // Step 4: Delete Auth Credentials
                                     user.delete().addOnCompleteListener { task ->
                                         if (task.isSuccessful) {
-                                            // Cleanup local storage
                                             getSharedPreferences("AegisProfile", Context.MODE_PRIVATE).edit().clear().apply()
                                             getSharedPreferences("AegisData", Context.MODE_PRIVATE).edit().clear().apply()
-                                            
-                                            val intent = Intent(this, LoginActivity::class.java)
-                                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                            startActivity(intent)
+                                            startActivity(Intent(this, LoginActivity::class.java).apply {
+                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                            })
                                             finishAffinity()
                                         }
                                     }
@@ -142,16 +136,11 @@ class SettingsActivity : AppCompatActivity() {
             }
     }
 
-    private var profileListener: com.google.firebase.firestore.ListenerRegistration? = null
-
     private fun loadUserData() {
         try {
             val currentUser = auth.currentUser ?: return
-            
-            // Set email immediately from Auth
             findViewById<TextView>(R.id.tvProfileEmail)?.text = currentUser.email ?: "No Email"
 
-            // 🚀 REAL-TIME SYNC: Listen for profile changes (Lowercase 'users')
             profileListener?.remove()
             profileListener = db.collection("users").document(currentUser.uid)
                 .addSnapshotListener { document, e ->
@@ -160,10 +149,26 @@ class SettingsActivity : AppCompatActivity() {
                         return@addSnapshotListener
                     }
                     if (document != null && document.exists()) {
-                        val name = document.getString("displayName") ?: document.getString("name") ?: "Operator"
+                        val name = document.getString("name") ?: document.getString("displayName") ?: "Operator"
                         findViewById<TextView>(R.id.tvProfileName)?.text = name
 
-                        updateStatsUI(document)
+                        // 🚀 MASTER FIX: READ STATS DIRECTLY FROM ROOT
+                        val totalDrives = document.getLong("totalDrives") ?: 0L
+                        val totalDuration = document.getLong("totalDuration") ?: 0L
+                        val scoreSum = document.getLong("lifetimeScoreSum") ?: 0L
+
+                        val safetyPercent = if (totalDrives > 0) (scoreSum.toDouble() / totalDrives) else 100.0
+                        
+                        // 🚀 FORMAT DURATION: Hh Mm
+                        val hours = totalDuration / 3600
+                        val minutes = (totalDuration % 3600) / 60
+                        val durationText = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+
+                        runOnUiThread {
+                            findViewById<TextView>(R.id.tvStatTrips)?.text = totalDrives.toString()
+                            findViewById<TextView>(R.id.tvStatDriveTime)?.text = durationText
+                            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", safetyPercent)
+                        }
                     }
                 }
 
@@ -177,34 +182,8 @@ class SettingsActivity : AppCompatActivity() {
                     ivAvatar.setImageURI(Uri.fromFile(file))
                 }
             }
-            
         } catch (e: Exception) {
             Log.e(TAG, "Profile load failed", e)
-        }
-    }
-
-    private fun updateStatsUI(snapshot: com.google.firebase.firestore.DocumentSnapshot) {
-        try {
-            // Extract lifetimeStats safely from the hierarchical schema
-            val lifetimeStats = snapshot.get("lifetimeStats") as? Map<*, *>
-            val totalDriveSeconds = (lifetimeStats?.get("totalDriveTimeSeconds") as? Long) ?: 0L
-            val totalTrips = (lifetimeStats?.get("totalDrives") as? Long) ?: 0L
-            val avgSafetyScore = (lifetimeStats?.get("averageSafetyScore") as? Double) ?: 100.0
-
-            val totalHours = totalDriveSeconds / 3600
-            val totalMinutes = (totalDriveSeconds % 3600) / 60
-            
-            val driveTimeText = when {
-                totalHours > 0 -> String.format(Locale.US, "%dh %dm", totalHours, totalMinutes)
-                totalMinutes > 0 -> String.format(Locale.US, "%dm %ds", totalMinutes, totalDriveSeconds % 60)
-                else -> String.format(Locale.US, "%ds", totalDriveSeconds)
-            }
-            
-            findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
-            findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", avgSafetyScore)
-            findViewById<TextView>(R.id.tvStatTrips)?.text = totalTrips.toString()
-        } catch (e: Exception) { 
-            Log.e(TAG, "Stats update failed", e)
         }
     }
 
@@ -216,13 +195,12 @@ class SettingsActivity : AppCompatActivity() {
             })
         }
 
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = auth.currentUser?.uid ?: return
         val userRef = db.collection("users").document(uid)
         val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
 
-        // 🚀 WRITE: Two-way sync via dot notation
         findViewById<SwitchMaterial>(R.id.switchAlertSound)?.setOnCheckedChangeListener { buttonView, isChecked ->
-            if (buttonView.isPressed) { // Only fire on user interaction
+            if (buttonView.isPressed) {
                 userRef.update("preferences.audibleAlertsEnabled", isChecked)
                 prefs.edit().putBoolean("alert_sound", isChecked).apply()
             }
@@ -240,7 +218,6 @@ class SettingsActivity : AppCompatActivity() {
                 try {
                     userRef.update("preferences.darkModeEnabled", isChecked)
                     prefs.edit().putBoolean("dark_mode", isChecked).apply()
-                    
                     val targetMode = if (isChecked) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
                     if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
                         AppCompatDelegate.setDefaultNightMode(targetMode)
@@ -264,8 +241,9 @@ class SettingsActivity : AppCompatActivity() {
                 .setTitle("Terminate Session?")
                 .setPositiveButton("LOGOUT") { _, _ ->
                     auth.signOut()
-                    val intent = Intent(this, LoginActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    val intent = Intent(this, LoginActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    }
                     startActivity(intent)
                     finishAffinity()
                 }

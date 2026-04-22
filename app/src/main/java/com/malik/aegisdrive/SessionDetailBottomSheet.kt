@@ -25,8 +25,7 @@ class SessionDetailBottomSheet(private val sessionId: String) : BottomSheetDialo
         view.findViewById<View>(R.id.btnCloseSheet).setOnClickListener { dismiss() }
 
         val uid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        FirebaseFirestore.getInstance().collection("users").document(uid)
-            .collection("drive_sessions").document(sessionId).get()
+        FirebaseFirestore.getInstance().collection("DriveSessions").document(sessionId).get()
             .addOnSuccessListener { doc ->
                 if (doc.exists() && isAdded) {
                     val score = doc.getLong("score")?.toInt() ?: 0

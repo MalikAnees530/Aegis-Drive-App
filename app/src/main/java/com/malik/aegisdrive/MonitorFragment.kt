@@ -334,31 +334,51 @@ class MonitorFragment : Fragment() {
         if (!isMonitoring) return
         
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val db = FirebaseFirestore.getInstance()
+        
         val finalScore = safetyScore.toInt()
         val totalAlerts = alertCount
         val durationSeconds = elapsedSeconds
         val focusLevel = (finalScore - (totalAlerts * 4)).coerceIn(0, 100)
 
-        // 🚀 NEW HIERARCHICAL PAYLOAD
+        // 🚀 TACTICAL PIVOT: Flat Schema session data
         val sessionData = hashMapOf(
+            "userId" to uid,
             "score" to finalScore,
             "alerts" to totalAlerts,
             "duration" to durationSeconds,
             "focusLevel" to focusLevel,
             "timestamp" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
-            "startTime" to com.google.firebase.Timestamp(java.util.Date(System.currentTimeMillis() - (elapsedSeconds * 1000))),
-            "dateString" to java.text.SimpleDateFormat("MMM dd, yyyy - hh:mm a", java.util.Locale.getDefault()).format(java.util.Date())
+            "startTime" to com.google.firebase.Timestamp(Date(System.currentTimeMillis() - (durationSeconds * 1000))),
+            "dateString" to SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(Date())
         )
 
-        val db = FirebaseFirestore.getInstance()
-        // 🚀 WRITE TO SUBCOLLECTION: users/{uid}/drive_sessions
-        db.collection("users").document(uid).collection("drive_sessions")
-            .add(sessionData)
-            .addOnSuccessListener { 
-                Log.d("Firebase", "DriveSession Saved to Hierarchy") 
-                updateGlobalAnalytics(finalScore)
+        // 🚀 BATCH WRITE: Root DriveSessions + User Stats
+        val batch = db.batch()
+        val sessionRef = db.collection("DriveSessions").document()
+        val userRef = db.collection("users").document(uid)
+
+        batch.set(sessionRef, sessionData)
+
+        val userUpdates = hashMapOf(
+            "totalDrives" to com.google.firebase.firestore.FieldValue.increment(1),
+            "totalDuration" to com.google.firebase.firestore.FieldValue.increment(durationSeconds.toLong()),
+            "lifetimeScoreSum" to com.google.firebase.firestore.FieldValue.increment(finalScore.toLong())
+        )
+        batch.set(userRef, userUpdates, com.google.firebase.firestore.SetOptions.merge())
+
+        batch.commit().addOnSuccessListener {
+            Log.d(TAG, "Sync Successful: Root collection updated.")
+            activity?.let {
+                val intent = Intent(it, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(intent)
             }
-            .addOnFailureListener { e -> Log.e("Firebase", "WRITE FAILED", e) }
+        }.addOnFailureListener { e ->
+            Log.e("FIREBASE_CRASH", "Batch failed: ${e.message}")
+            AegisNotify.show(requireContext(), "Sync Failure: Check Connectivity", AegisNotify.Type.ERROR)
+        }
 
         isMonitoring = false
         timerHandler.removeCallbacks(timerRunnable)
@@ -366,40 +386,7 @@ class MonitorFragment : Fragment() {
         stopAudioAlarm()
         btnMuteAlarm.visibility = View.GONE
         faceOverlay.clear()
-        
         AegisNotify.show(requireContext(), "Telemetry Synchronized", AegisNotify.Type.INFO)
-
-        // Navigate back to Home Dashboard
-        activity?.let {
-            val intent = Intent(it, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            }
-            startActivity(intent)
-        }
-    }
-
-    private fun updateGlobalAnalytics(sessionScore: Int) {
-        val db = FirebaseFirestore.getInstance()
-        // 🚀 BUG 2 FIX: Use daily_stats_yyyy_MM_dd for global aggregation
-        val dateId = java.text.SimpleDateFormat("daily_stats_yyyy_MM_dd", java.util.Locale.getDefault()).format(java.util.Date())
-        val analyticsRef = db.collection("SystemAnalytics").document(dateId)
-        
-        db.runTransaction { transaction ->
-            val snapshot = transaction.get(analyticsRef)
-            
-            val totalSessions = (snapshot.getLong("totalSessionsLoggedToday") ?: 0L) + 1
-            val criticalAlerts = (snapshot.getLong("criticalAlertsTriggeredGlobally") ?: 0L) + (if (sessionScore < 50) 1 else 0)
-            
-            val updates = mapOf(
-                "totalSessionsLoggedToday" to totalSessions,
-                "criticalAlertsTriggeredGlobally" to criticalAlerts,
-                "lastUpdated" to com.google.firebase.firestore.FieldValue.serverTimestamp()
-            )
-            
-            transaction.set(analyticsRef, updates, com.google.firebase.firestore.SetOptions.merge())
-        }.addOnFailureListener { e ->
-            Log.e("AegisAnalytics", "Global sync failed", e)
-        }
     }
 
     private fun setUIMonitoringState(isActive: Boolean) {

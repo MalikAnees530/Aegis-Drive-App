@@ -33,11 +33,11 @@ class SessionHistoryAdapter(private val sessionList: List<com.malik.aegisdrive.m
         holder.tvSessionTitle.text = "Session $sessionNumber"
         
         // Use a formatted string from Timestamp
-        val date = session.startTime.toDate()
+        val date = session.startTime?.toDate() ?: session.timestamp?.toDate() ?: java.util.Date()
         val dateString = java.text.SimpleDateFormat("MMM dd, hh:mm a", java.util.Locale.getDefault()).format(date)
         
         holder.tvSessionDate.text = dateString
-        holder.tvSessionScore.text = "${session.finalSafetyScore}%"
+        holder.tvSessionScore.text = "${session.score}%"
 
         // 🚀 THEME INJECTION
         val prefs = holder.itemView.context.getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
