@@ -39,20 +39,16 @@ class EditProfileActivity : AppCompatActivity() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // 🚀 CRITICAL FIX: BREAK INFINITE RECREATION LOOP
-        try {
-            val prefs = getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
-            val isDarkMode = prefs.getBoolean("dark_mode", true)
-            val targetMode = if (isDarkMode) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-
-            if (AppCompatDelegate.getDefaultNightMode() != targetMode) {
-                AppCompatDelegate.setDefaultNightMode(targetMode)
-            }
-        } catch (e: Exception) {
-            Log.e("EditProfile", "Failed to apply dark mode", e)
+    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted: Boolean ->
+        if (isGranted) {
+            pickImageLauncher.launch("image/*")
+        } else {
+            AegisNotify.show(this, "Permission denied for gallery access", AegisNotify.Type.WARNING)
         }
+    }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // ... (rest of onCreate)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_edit_profile)
 
@@ -78,16 +74,23 @@ class EditProfileActivity : AppCompatActivity() {
                 if (document != null && document.exists()) {
                     val name = document.getString("name") ?: document.getString("displayName") ?: ""
                     etName.setText(name)
+                    
+                    // Hydrate from Firestore if available
+                    val cloudImagePath = document.getString("profileImageUrl")
+                    if (cloudImagePath != null && selectedImageUri == null) {
+                        val file = File(Uri.parse(cloudImagePath).path ?: "")
+                        if (file.exists()) ivAvatarEdit.setImageURI(Uri.fromFile(file))
+                    }
                 }
             }
         
         etEmailRead.setText(FirebaseAuth.getInstance().currentUser?.email ?: "Not Authenticated")
 
-        // Load Local Avatar path
+        // Load Local Avatar path fallback
         val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
         val imagePath = profilePrefs.getString("user_image_path", null)
-        if (imagePath != null) {
-            val file = File(imagePath)
+        if (imagePath != null && selectedImageUri == null) {
+            val file = File(Uri.parse(imagePath).path ?: "")
             if (file.exists()) {
                 ivAvatarEdit.setImageURI(Uri.fromFile(file))
             }
@@ -96,7 +99,19 @@ class EditProfileActivity : AppCompatActivity() {
 
     private fun setupListeners() {
         findViewById<MaterialCardView>(R.id.btnBack).setOnClickListener { finish() }
-        findViewById<MaterialCardView>(R.id.btnChangeAvatar).setOnClickListener { pickImageLauncher.launch("image/*") }
+        findViewById<MaterialCardView>(R.id.btnChangeAvatar).setOnClickListener { 
+            val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                android.Manifest.permission.READ_MEDIA_IMAGES
+            } else {
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            
+            if (androidx.core.content.ContextCompat.checkSelfPermission(this, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                pickImageLauncher.launch("image/*")
+            } else {
+                requestPermissionLauncher.launch(permission)
+            }
+        }
         findViewById<MaterialButton>(R.id.btnSaveProfile).setOnClickListener { saveProfile() }
         findViewById<MaterialButton>(R.id.btnDeleteAccount).setOnClickListener { confirmAccountDeletion() }
     }
@@ -127,9 +142,20 @@ class EditProfileActivity : AppCompatActivity() {
             return
         }
 
-        // 🚀 UPDATE PIVOT: Target 'name' field specifically
+        val updates = hashMapOf<String, Any>(
+            "name" to newName
+        )
+        
+        selectedImageUri?.let { uri ->
+            updates["profileImageUrl"] = uri.toString()
+            // Persist to SharedPreferences for offline speed
+            val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
+            profilePrefs.edit().putString("user_image_path", uri.toString()).apply()
+        }
+
+        // 🚀 UPDATE PIVOT: Target 'name' and 'profileImageUrl'
         FirebaseFirestore.getInstance().collection("users").document(uid)
-            .update("name", newName)
+            .update(updates)
             .addOnSuccessListener {
                 AegisNotify.show(this, "Aegis Profile Hydrated", AegisNotify.Type.SUCCESS)
                 finish()
