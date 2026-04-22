@@ -159,14 +159,20 @@ class SettingsActivity : AppCompatActivity() {
 
                         val safetyPercent = if (totalDrives > 0) (scoreSum.toDouble() / totalDrives) else 100.0
                         
-                        // 🚀 FORMAT DURATION: Hh Mm
-                        val hours = totalDuration / 3600
-                        val minutes = (totalDuration % 3600) / 60
-                        val durationText = if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
+                        // 🚀 DYNAMIC TIME FORMATTING (H M S)
+                        val h = totalDuration / 3600
+                        val m = (totalDuration % 3600) / 60
+                        val s = totalDuration % 60
+
+                        val driveTimeText = when {
+                            h > 0 -> String.format(java.util.Locale.US, "%dh %dm %ds", h, m, s)
+                            m > 0 -> String.format(java.util.Locale.US, "%dm %ds", m, s)
+                            else -> String.format(java.util.Locale.US, "%ds", s)
+                        }
 
                         runOnUiThread {
                             findViewById<TextView>(R.id.tvStatTrips)?.text = totalDrives.toString()
-                            findViewById<TextView>(R.id.tvStatDriveTime)?.text = durationText
+                            findViewById<TextView>(R.id.tvStatDriveTime)?.text = driveTimeText
                             findViewById<TextView>(R.id.tvStatSafety)?.text = String.format(Locale.US, "%.1f%%", safetyPercent)
                         }
                     }
