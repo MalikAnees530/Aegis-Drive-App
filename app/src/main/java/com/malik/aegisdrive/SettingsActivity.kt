@@ -178,15 +178,23 @@ class SettingsActivity : AppCompatActivity() {
                     }
                 }
 
-            // Load Local Avatar if exists
-            val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
-            val imagePath = profilePrefs.getString("user_image_path", null)
-            val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
-            if (imagePath != null && ivAvatar != null) {
-                val file = File(imagePath)
-                if (file.exists()) {
-                    ivAvatar.setImageURI(Uri.fromFile(file))
+            // 🚀 LOAD SAVED AVATAR FROM LOCAL STORAGE
+            try {
+                val profilePrefs = getSharedPreferences("AegisProfile", Context.MODE_PRIVATE)
+                val imagePath = profilePrefs.getString("user_image_path", null)
+                if (imagePath != null) {
+                    val uri = Uri.parse(imagePath)
+                    val path = uri.path // Robustly extract path from URI string
+                    if (path != null) {
+                        val file = File(path)
+                        if (file.exists()) {
+                            val ivAvatar = findViewById<ImageView>(R.id.ivProfileAvatar)
+                            ivAvatar?.setImageURI(Uri.fromFile(file))
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load avatar", e)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Profile load failed", e)
