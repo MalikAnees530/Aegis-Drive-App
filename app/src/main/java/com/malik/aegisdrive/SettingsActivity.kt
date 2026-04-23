@@ -245,7 +245,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<View>(R.id.rowAbout)?.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("Aegis Drive Intelligence")
-                .setMessage("Enterprise Security Framework v1.0.0")
+                .setMessage("Aegis Drive is an offline-first digital guardian that uses Edge AI to detect driver fatigue in real-time. It combines proactive safety alerts with premium navigation to ensure a secure journey.")
                 .setPositiveButton("CLOSE", null)
                 .show()
         }
