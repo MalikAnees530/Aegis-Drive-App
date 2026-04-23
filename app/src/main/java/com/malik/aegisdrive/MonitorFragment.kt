@@ -59,6 +59,7 @@ class MonitorFragment : Fragment() {
     private lateinit var tvFPS: TextView
     private lateinit var tvLiveEar: TextView
     private lateinit var tvLiveMar: TextView
+
     private lateinit var tvStatusOverlay: TextView
     private lateinit var tvDetectionIcon: TextView
     private lateinit var tvDetectionLabel: TextView
@@ -73,6 +74,7 @@ class MonitorFragment : Fragment() {
     private lateinit var tvLiveText: TextView
     private lateinit var tvSafetyScore: TextView
     private lateinit var pbSafetyScore: ProgressBar
+    private lateinit var warningBanner: MaterialCardView
 
     private var cameraExecutor: ExecutorService? = null
     private var tfliteInterpreter: Interpreter? = null
@@ -155,7 +157,7 @@ class MonitorFragment : Fragment() {
         }
         faceOverlay.bringToFront()
         faceOverlay.elevation = 100f
-
+        
         setupAudioEngine()
         loadAIModels()
 
@@ -163,7 +165,8 @@ class MonitorFragment : Fragment() {
         setUIMonitoringState(false)
         btnMuteAlarm.visibility = View.GONE
 
-        if (hasCameraPermission()) startCamera() else requestCameraPermission()
+        // 🚀 PERMISSION FIX: Only check, don't auto-request on every creation to avoid loop
+        if (hasCameraPermission()) startCamera()
 
         btnStopMonitor.setOnClickListener {
             if (!hasCameraPermission()) {
@@ -391,37 +394,34 @@ class MonitorFragment : Fragment() {
 
     private fun setUIMonitoringState(isActive: Boolean) {
         if (isActive) {
-            btnStopMonitor.text = "STOP MONITORING"
-            btnStopMonitor.setTextColor("#EF5350".toColorInt())
-            btnStopMonitor.backgroundTintList = ColorStateList.valueOf("#CC0D1B26".toColorInt())
-            btnStopMonitor.strokeWidth = 2
-            btnStopMonitor.strokeColor = ColorStateList.valueOf("#EF5350".toColorInt())
-            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AA22C55E".toColorInt()))
-            tvLiveText.text = "LIVE"
-            setStatus("● SAFE", "#6ABF69")
-        } else {
-            btnStopMonitor.text = "BEGIN MONITORING"
+            btnStopMonitor.text = getString(R.string.stop_monitoring)
             btnStopMonitor.setTextColor("#0F172A".toColorInt())
             btnStopMonitor.backgroundTintList = ColorStateList.valueOf("#38BDF8".toColorInt())
-            btnStopMonitor.strokeWidth = 0
+            liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AA22C55E".toColorInt()))
+            tvLiveText.text = getString(R.string.live)
+            setStatus(getString(R.string.secure), "#22C55E")
+        } else {
+            btnStopMonitor.text = getString(R.string.begin_monitoring)
+            btnStopMonitor.setTextColor("#0F172A".toColorInt())
+            btnStopMonitor.backgroundTintList = ColorStateList.valueOf("#38BDF8".toColorInt())
             liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AAEF4444".toColorInt()))
-            tvLiveText.text = "OFFLINE"
-            setStatus("● STANDBY", "#6D8196")
+            tvLiveText.text = getString(R.string.offline)
+            setStatus(getString(R.string.standby), "#94A3B8")
             tvDetectionIcon.text = "–"
-            tvDetectionLabel.text = "Waiting..."
-            tvDetectionLabel.setTextColor("#6D8196".toColorInt())
+            tvDetectionLabel.text = getString(R.string.waiting)
+            tvDetectionLabel.setTextColor("#64748B".toColorInt())
             tvConfidence.text = "–"
-            tvConfidence.setTextColor("#6D8196".toColorInt())
+            tvConfidence.setTextColor("#38BDF8".toColorInt())
             tvEyeState.text = "–"
-            tvEyeState.setTextColor("#6D8196".toColorInt())
-            tvDrowsiness.text = "–"
-            tvDrowsiness.setTextColor("#6D8196".toColorInt())
-            tvLiveEar.text = "EAR: 0.00"
-            tvLiveMar.text = "MAR: 0.00"
-            tvFPS.text = "0 FPS"
-            tvTimer.text = "00:00:00"
-            // 🚀 SENIOR FIX: Do NOT reset the persistent safetyScore here.
-            // Only update the local UI, let the last session score persist in SharedPreferences.
+            tvEyeState.setTextColor("#FFFFFF".toColorInt())
+            tvDrowsiness.text = getString(R.string.stable)
+            tvDrowsiness.setTextColor("#94A3B8".toColorInt())
+            tvLiveEar.text = getString(R.string.eye_openness_default)
+            tvLiveMar.text = getString(R.string.mouth_gap_default)
+            tvFPS.text = getString(R.string.default_fps)
+            tvTimer.text = getString(R.string.default_timer)
+            warningBanner.visibility = View.GONE
+            
             val scoreInt = safetyScore.toInt()
             tvSafetyScore.text = "$scoreInt%"
             pbSafetyScore.progress = scoreInt
@@ -438,7 +438,6 @@ class MonitorFragment : Fragment() {
             try {
                 cameraProvider = cameraProviderFuture.get()
 
-                // 🚀 SMOOTH: Your original Resolution Selector logic
                 val previewResolution = ResolutionSelector.Builder()
                     .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
                     .build()
@@ -499,27 +498,66 @@ class MonitorFragment : Fragment() {
                 val mar = calculateMAR(lipPoints)
 
                 activity?.runOnUiThread {
-                    tvLiveEar.text = String.format(Locale.US, "EAR: %.2f", avgEar)
-                    tvLiveMar.text = String.format(Locale.US, "MAR: %.2f", mar)
+                    tvLiveEar.text = String.format(Locale.US, "Eye Openness: %.2f", avgEar)
+                    tvLiveMar.text = String.format(Locale.US, "Mouth Gap: %.2f", mar)
                 }
 
-                val dynamicEarThreshold = if (mar > 0.40f) 0.15f else 0.20f
-                
-                if (avgEar < dynamicEarThreshold) {
-                    closedEyeFrames++
-                    openEyeFrames = 0
-                } else {
+                // 🚀 TASK 1: EXTREME PERSPECTIVE IGNORING & ADVANCED THRESHOLDING
+                val nose = landmarks[1]
+                val topHead = landmarks[10]
+                val chin = landmarks[152]
+                val leftEyeInner = landmarks[133]
+                val rightEyeInner = landmarks[362]
+
+                // 1. Calculate Pitch (Up/Down) & Yaw (Left/Right)
+                val upperFace = distance(topHead, nose)
+                val lowerFace = distance(nose, chin)
+                val pitchRatio = if (upperFace > 0) lowerFace / upperFace else 1.0f
+
+                val leftDist = distance(leftEyeInner, nose)
+                val rightDist = distance(rightEyeInner, nose)
+                val yawRatio = maxOf(leftDist, rightDist) / minOf(leftDist, rightDist).coerceAtLeast(0.001f)
+
+                // 2. EXTREME ANGLE DEADZONE CHECK
+                // If the head is turned extremely far, assume eyes are open to prevent false alarms
+                val isExtremeAngle = yawRatio > 2.0f || pitchRatio > 1.6f || pitchRatio < 0.6f
+
+                // 3. ULTRA-PRECISE DYNAMIC THRESHOLD (Even more aggressive drop)
+                val dynamicEarThreshold = when {
+                    pitchRatio > 1.35f -> 0.06f // Looking heavily upward: drastic drop
+                    pitchRatio > 1.20f -> 0.09f // Looking slightly upward
+                    yawRatio > 1.6f -> 0.06f    // Extreme Left/Right
+                    yawRatio > 1.3f -> 0.10f    // Moderate Left/Right
+                    mar > 0.40f -> 0.12f        // Yawning
+                    else -> 0.16f               // Normal precise posture
+                }
+
+                // 4. INSTANT STATE EVALUATION WITH DEADZONE OVERRIDE
+                if (isExtremeAngle) {
                     openEyeFrames++
                     closedEyeFrames = 0
+                } else {
+                    if (avgEar < dynamicEarThreshold) {
+                        closedEyeFrames++
+                        openEyeFrames = 0
+                    } else {
+                        openEyeFrames++
+                        closedEyeFrames = 0
+                    }
                 }
 
                 activity?.runOnUiThread {
+                    // 4. INSTANT UI RESPONSE (Trigger on 2 frames for immediate visual feedback)
                     if (closedEyeFrames >= 2) {
                         tvEyeState.text = "Closed"
-                        tvEyeState.setTextColor("#EF5350".toColorInt()) 
-                    } else if (openEyeFrames >= 2) {
+                        tvEyeState.setTextColor(android.graphics.Color.parseColor("#EF5350"))
+                        warningBanner.visibility = View.VISIBLE 
+                        
+                        if (closedEyeFrames % 10 == 0) triggerVibration(200) 
+                    } else if (openEyeFrames >= 1) { // Instant recovery to Open
                         tvEyeState.text = "Open"
-                        tvEyeState.setTextColor("#6ABF69".toColorInt()) 
+                        tvEyeState.setTextColor(android.graphics.Color.parseColor("#6ABF69"))
+                        warningBanner.visibility = View.GONE 
                     }
                 }
 
@@ -532,10 +570,9 @@ class MonitorFragment : Fragment() {
                     runLSTMInference(avgEar, mar)
                 } else {
                     activity?.runOnUiThread {
-                        tvDetectionLabel.text = "Tracking Face..."
+                        tvDetectionLabel.text = "Face Tracked"
                         tvDetectionLabel.setTextColor("#38BDF8".toColorInt())
                         tvConfidence.text = "${frameSequence.size}/30"
-                        tvConfidence.setTextColor("#38BDF8".toColorInt())
                     }
                 }
             } else {
@@ -543,9 +580,10 @@ class MonitorFragment : Fragment() {
                 if (framesWithoutFace > 5) {
                     faceOverlay.clear() 
                     activity?.runOnUiThread {
-                        tvDetectionLabel.text = "No Face Detected"
-                        tvDetectionLabel.setTextColor("#EF5350".toColorInt())
-                        tvConfidence.text = "-"
+                        tvDetectionLabel.text = "No Target"
+                        tvDetectionLabel.setTextColor("#EF4444".toColorInt())
+                        tvConfidence.text = "Searching..."
+                        warningBanner.visibility = View.GONE
                     }
                 }
             }
@@ -621,40 +659,28 @@ class MonitorFragment : Fragment() {
 
         when (labelIndex) {
             0 -> { 
-                tvDetectionIcon.text = "👁"
-                tvDetectionLabel.setTextColor("#6ABF69".toColorInt())
-                tvConfidence.setTextColor("#6ABF69".toColorInt())
-                tvDrowsiness.text = "None"
-                tvDrowsiness.setTextColor("#6ABF69".toColorInt())
-                setStatus("● SAFE", "#6ABF69")
+                tvDetectionIcon.text = "🛡️"
+                tvDetectionLabel.setTextColor("#22C55E".toColorInt())
+                tvDrowsiness.text = "Optimized"
+                tvDrowsiness.setTextColor("#22C55E".toColorInt())
+                setStatus("● SECURE", "#22C55E")
                 safetyScore = minOf(100f, safetyScore + 1.0f) 
             }
             1 -> { 
                 tvDetectionIcon.text = "😴"
-                tvDetectionLabel.setTextColor("#EF5350".toColorInt())
-                tvConfidence.setTextColor("#EF5350".toColorInt())
-                tvDrowsiness.text = "Drowsy" 
-                tvDrowsiness.setTextColor("#EF5350".toColorInt())
-                setStatus("● DANGER", "#EF5350")
+                tvDetectionLabel.setTextColor("#EF4444".toColorInt())
+                tvDrowsiness.text = "Danger" 
+                tvDrowsiness.setTextColor("#EF4444".toColorInt())
+                setStatus("● DANGER", "#EF4444")
                 safetyScore = maxOf(0f, safetyScore - 1.5f) 
             }
             2 -> { 
                 tvDetectionIcon.text = "🥱"
-                tvDetectionLabel.setTextColor("#FFB74D".toColorInt())
-                tvConfidence.setTextColor("#FFB74D".toColorInt())
-                tvDrowsiness.text = "Yawning" 
-                tvDrowsiness.setTextColor("#FFB74D".toColorInt())
-                setStatus("● WARNING", "#FFB74D")
+                tvDetectionLabel.setTextColor("#F59E0B".toColorInt())
+                tvDrowsiness.text = "Fatigue" 
+                tvDrowsiness.setTextColor("#F59E0B".toColorInt())
+                setStatus("● WARNING", "#F59E0B")
                 safetyScore = maxOf(0f, safetyScore - 0.5f)
-                
-                // 🚀 Subtle Haptic for Early Fatigue
-                val prefs = requireActivity().getSharedPreferences("AegisSettings", Context.MODE_PRIVATE)
-                if (prefs.getBoolean("vibration", true)) {
-                    val vibrator = requireContext().getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator
-                    if (vibrator.hasVibrator()) {
-                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(100, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-                    }
-                }
             }
         }
         updateSafetyUI()
@@ -666,30 +692,31 @@ class MonitorFragment : Fragment() {
         tvSafetyScore.text = "$scoreInt%"
         pbSafetyScore.progress = scoreInt
         
-        // 🚀 REAL-TIME SYNC: Update shared state for other fragments
         try {
             val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
             prefs.edit().putInt("LAST_SCORE", scoreInt).apply()
         } catch (e: Exception) { }
 
-        val color = when {
-            safetyScore > 75 -> "#6ABF69"
-            safetyScore > 45 -> "#FFB74D"
-            else             -> "#EF5350"
-        }
-        pbSafetyScore.progressTintList = ColorStateList.valueOf(color.toColorInt())
+    // 🚀 UPDATED COLOR THRESHOLD TO 50
+    val color = when {
+        safetyScore > 75 -> "#6ABF69"
+        safetyScore > 50 -> "#FFB74D" 
+        else             -> "#EF5350"
+    }
+    pbSafetyScore.progressTintList = ColorStateList.valueOf(android.graphics.Color.parseColor(color))
 
-        if (safetyScore <= 45f) {
-            if (isManuallyMuted) {
-                if (System.currentTimeMillis() - muteTimestamp > 10000) { 
-                    isManuallyMuted = false 
-                    playAudioAlarm()
-                }
-            } else { playAudioAlarm() }
-        } else if (safetyScore > 55f) {
-            isManuallyMuted = false 
-            stopAudioAlarm()
-        }
+    // 🚀 UPDATED ALARM THRESHOLD TO 50
+    if (safetyScore <= 50f) {
+        if (isManuallyMuted) {
+            if (System.currentTimeMillis() - muteTimestamp > 10000) { 
+                isManuallyMuted = false 
+                playAudioAlarm()
+            }
+        } else { playAudioAlarm() }
+    } else if (safetyScore > 60f) { // Buffer increased to 60f to prevent alarm stuttering
+        isManuallyMuted = false 
+        stopAudioAlarm()
+    }
     }
 
     private fun setStatus(text: String, hexColor: String) {
@@ -737,6 +764,7 @@ class MonitorFragment : Fragment() {
         tvLiveText       = view.findViewById(R.id.tvLiveText)
         tvSafetyScore    = view.findViewById(R.id.tvSafetyScore)
         pbSafetyScore    = view.findViewById(R.id.pbSafetyScore)
+        warningBanner    = view.findViewById(R.id.warningBanner)
     }
 
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED

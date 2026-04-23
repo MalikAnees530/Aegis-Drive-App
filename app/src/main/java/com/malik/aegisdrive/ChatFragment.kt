@@ -361,7 +361,10 @@ class ChatFragment : Fragment() {
 
     private fun handleMicClick() {
         val perm = Manifest.permission.RECORD_AUDIO
-        if (requireContext().checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) { requestPermissionLauncher.launch(perm); return }
+        if (ContextCompat.checkSelfPermission(requireContext(), perm) != PackageManager.PERMISSION_GRANTED) { 
+            requestPermissionLauncher.launch(perm)
+            return 
+        }
         
         if (isVoiceMode) { 
             deactivateVoiceMode()

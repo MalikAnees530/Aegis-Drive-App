@@ -5,9 +5,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,17 +23,35 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
-import androidx.core.app.ActivityCompat
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.gms.location.*
 import java.util.*
 
-class NavigateFragment : Fragment(), LocationListener {
+class NavigateFragment : Fragment(), SensorEventListener {
 
     private lateinit var webView: WebView
-    private var locationManager: LocationManager? = null
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var locationCallback: LocationCallback? = null
+    private lateinit var sensorManager: SensorManager
+    private var rotationSensor: Sensor? = null
+    
+    private var currentLat = 0.0
+    private var currentLng = 0.0
+    private var currentHeading = 0f
+
     private val handler = Handler(Looper.getMainLooper())
     private var speechRecognizer: SpeechRecognizer? = null
+
+    // 🚀 TASK 1: Break the Permission Loop
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            setupLocationUpdates()
+        }
+    }
 
     private val sharedPrefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "LAST_SCORE") syncPassiveSafetyStatus()
@@ -45,30 +65,55 @@ class NavigateFragment : Fragment(), LocationListener {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         webView = view.findViewById(R.id.webView)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
         
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        // 🚀 TASK 1: Instant, High-Quality Map Rendering
+        webView.apply {
+            setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                databaseEnabled = true
+                cacheMode = WebSettings.LOAD_DEFAULT
+                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                // Note: setRenderPriority is deprecated but added for legacy compatibility if needed
+                @Suppress("DEPRECATION")
+                setRenderPriority(WebSettings.RenderPriority.HIGH)
+            }
         }
 
+        // Initialize Sensors
+        sensorManager = requireContext().getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 syncPassiveSafetyStatus()
-                getLastKnownLocation()?.let { onLocationChanged(it) }
+                getLastKnownLocation()
             }
         }
 
         webView.addJavascriptInterface(WebAppInterface(requireContext()), "Android")
         webView.loadUrl("file:///android_asset/navigate/index.html")
 
-        setupLocationUpdates()
+        checkPermissionsAndStart()
         setupInternalSpeech()
 
         requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(sharedPrefsListener)
+    }
+
+    private fun checkPermissionsAndStart() {
+        val fineLocation = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+        if (fineLocation != PackageManager.PERMISSION_GRANTED) {
+            requestPermissionLauncher.launch(arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ))
+        } else {
+            setupLocationUpdates()
+        }
     }
 
     private fun setupInternalSpeech() {
@@ -93,12 +138,50 @@ class NavigateFragment : Fragment(), LocationListener {
     }
 
     private fun setupLocationUpdates() {
-        locationManager = requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            try { locationManager?.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 2f, this) } catch (e: Exception) {}
-            try { locationManager?.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 2f, this) } catch (e: Exception) {}
+        // 🚀 TASK 2: High-Accuracy Continuous GPS
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000).apply {
+            setMinUpdateIntervalMillis(1000)
+            setWaitForAccurateLocation(true)
+        }.build()
+
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                locationResult.lastLocation?.let { location ->
+                    currentLat = location.latitude
+                    currentLng = location.longitude
+                    updateMapMarker()
+                }
+            }
+        }
+
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback!!, Looper.getMainLooper())
         }
     }
+
+    // 🚀 TASK 2.3: Bridge to JS (updateRealTimeTracking)
+    private fun updateMapMarker() {
+        if (!::webView.isInitialized || !isAdded) return
+        handler.post { 
+            webView.evaluateJavascript("javascript:updateRealTimeTracking($currentLat, $currentLng, $currentHeading);", null) 
+        }
+    }
+
+    // 🚀 TASK 2.2: Device Compass (Rotation)
+    override fun onSensorChanged(event: SensorEvent) {
+        if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+            val rotationMatrix = FloatArray(9)
+            SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+            val orientationAngles = FloatArray(3)
+            SensorManager.getOrientation(rotationMatrix, orientationAngles)
+            
+            // Convert radians to degrees
+            currentHeading = (Math.toDegrees(orientationAngles[0].toDouble()) + 360).toFloat() % 360
+            updateMapMarker()
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     private fun syncPassiveSafetyStatus() {
         if (!::webView.isInitialized) return
@@ -106,38 +189,31 @@ class NavigateFragment : Fragment(), LocationListener {
         handler.post { webView.evaluateJavascript("window.updateSafetyScore($score);", null) }
     }
 
-    override fun onLocationChanged(location: Location) {
-        if (!::webView.isInitialized || !isAdded) return
-        
-        // 🚀 SENIOR FIX: Advanced Speed & Bearing Filtering
-        // GPS speed can fluctuate. Use hasSpeed() and ignore tiny drifts under 1.5 km/h.
-        var speedKmh = 0.0
-        var heading = -1f // -1 means keep current map rotation
-
-        if (location.hasSpeed()) {
-            speedKmh = location.speed * 3.6
-            if (speedKmh < 1.5) speedKmh = 0.0 // Eliminate jitter when stopped
+    private fun getLastKnownLocation() {
+        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            location?.let { 
+                currentLat = it.latitude
+                currentLng = it.longitude
+                // 🚀 TASK 1: Eradicate "Blue Screen" with Instant Snap
+                handler.post { 
+                    webView.evaluateJavascript("javascript:initializeMapCenter(${it.latitude}, ${it.longitude});", null) 
+                }
+                updateMapMarker()
+            }
         }
-
-        // Only update camera bearing if we are actually moving to prevent wild map spinning at traffic lights
-        if (location.hasBearing() && speedKmh > 1.5) {
-            heading = location.bearing
-        }
-
-        handler.post { 
-            webView.evaluateJavascript("window.updateLocation(${location.latitude}, ${location.longitude}, $speedKmh, $heading);", null) 
-        }
-    }
-
-    private fun getLastKnownLocation(): Location? {
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
-        return try { locationManager?.getLastKnownLocation(LocationManager.GPS_PROVIDER) ?: locationManager?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) } catch (e: Exception) { null }
     }
 
     override fun onResume() { 
         super.onResume()
         syncPassiveSafetyStatus() 
         checkAndExecuteCommands()
+        rotationSensor?.let { sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager.unregisterListener(this)
     }
 
     private fun checkAndExecuteCommands() {
@@ -148,13 +224,11 @@ class NavigateFragment : Fragment(), LocationListener {
             val lon = prefs.getFloat("NAV_LON", 0f)
             val name = prefs.getString("NAV_NAME", "Destination")
             
-            // Clear command immediately to prevent loops
             prefs.edit().remove("NAV_CMD").apply()
             
             if (lat != 0f) {
                 handler.postDelayed({
                     webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], '$name');", null)
-                    // Wait a bit for the route to plan then start
                     handler.postDelayed({
                         webView.evaluateJavascript("document.getElementById('btnStartDrive').click();", null)
                     }, 1500)
@@ -163,9 +237,9 @@ class NavigateFragment : Fragment(), LocationListener {
         }
     }
     
-    // 🚀 SENIOR FIX: Strict Memory Leak Prevention for WebView
     override fun onDestroyView() {
         super.onDestroyView()
+        locationCallback?.let { fusedLocationClient.removeLocationUpdates(it) }
         try {
             webView.removeJavascriptInterface("Android")
             webView.stopLoading()
@@ -175,12 +249,9 @@ class NavigateFragment : Fragment(), LocationListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        locationManager?.removeUpdates(this)
         speechRecognizer?.destroy()
         requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(sharedPrefsListener)
     }
-
-    override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {}
 
     inner class WebAppInterface(private val mContext: Context) {
         @JavascriptInterface
@@ -197,8 +268,8 @@ class NavigateFragment : Fragment(), LocationListener {
         fun startVoiceRecognition() {
             handler.post {
                 val permission = Manifest.permission.RECORD_AUDIO
-                if (ActivityCompat.checkSelfPermission(mContext, permission) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(arrayOf(permission), 102)
+                if (ContextCompat.checkSelfPermission(mContext, permission) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissionLauncher.launch(arrayOf(permission))
                     return@post
                 }
 

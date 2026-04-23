@@ -80,4 +80,7 @@ dependencies {
 
     // 🚀 NEW: Android 12+ Splash Screen API
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    // Play Services Location
+    implementation(libs.play.services.location)
 }

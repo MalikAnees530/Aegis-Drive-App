@@ -1,3 +1,24 @@
 <resources>
     <string name="app_name">Aegis Drive</string>
+    <string name="aegis_drive">AEGIS DRIVE</string>
+    <string name="sensory_intelligence">SENSORY INTELLIGENCE</string>
+    <string name="eye_openness_default">Eye Openness: 0.00</string>
+    <string name="mouth_gap_default">Mouth Gap: 0.00</string>
+    <string name="offline">OFFLINE</string>
+    <string name="live">LIVE</string>
+    <string name="default_timer">00:00:00</string>
+    <string name="default_fps">0 FPS</string>
+    <string name="danger_eyes_closed">DANGER: EYES CLOSED</string>
+    <string name="standby">● STANDBY</string>
+    <string name="secure">● SECURE</string>
+    <string name="mute_alarm">🔕 MUTE ALARM</string>
+    <string name="ai_engine">AI ENGINE</string>
+    <string name="waiting">Waiting...</string>
+    <string name="eye_state">EYE STATE</string>
+    <string name="alerts">ALERTS</string>
+    <string name="stable">Stable</string>
+    <string name="telemetry_safety_index">DRIVING SAFETY SCORE</string>
+    <string name="full_score">100%</string>
+    <string name="begin_monitoring">BEGIN MONITORING</string>
+    <string name="stop_monitoring">STOP MONITORING</string>
 </resources>

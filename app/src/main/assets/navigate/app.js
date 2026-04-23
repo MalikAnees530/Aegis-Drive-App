@@ -107,24 +107,25 @@ async function performSearch(query) {
     if (!query) return;
     const q = optimizeQuery(query);
     try {
-        let url;
-        const encodedQ = encodeURIComponent(q);
-        if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
-            url = `https://api.tomtom.com/search/2/search/${encodedQ}.json?key=${TOMTOM_KEY}&countrySet=PK&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=1&radius=50000&typeahead=true&idxSet=Str,Geo,Addr`;
-        } else {
-            url = `https://photon.komoot.io/api/?q=${encodedQ}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=1`;
-        }
+        // 🚀 TASK 2: High-Precision, Region-Locked Geocoding
+        const safeQuery = encodeURIComponent(q.trim());
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${safeQuery}&countrycodes=pk&addressdetails=1&limit=5`;
         
         const res = await fetch(url);
         const data = await res.json();
-        if (data.results && data.results.length > 0) {
-            const item = data.results[0];
-            handleDestinationSelected([item.position.lon, item.position.lat], item.poi ? item.poi.name : item.address.freeformAddress);
-        } else if (data.features && data.features.length > 0) {
-            const item = data.features[0];
-            handleDestinationSelected(item.geometry.coordinates, item.properties.name || q.split(' ')[0]);
-        } else { showCustomToast("❌ Location not found"); }
-    } catch (e) { showCustomToast("❌ Search failed"); }
+        
+        if (data && data.length > 0) {
+            const bestResult = data[0];
+            const lat = parseFloat(bestResult.lat);
+            const lon = parseFloat(bestResult.lon);
+            const name = bestResult.display_name;
+            handleDestinationSelected([lon, lat], name);
+        } else {
+            showCustomToast("❌ Location not found in Pakistan");
+        }
+    } catch (e) {
+        showCustomToast("❌ Search failed");
+    }
 }
 
 etSearch.oninput = debounce(async (e) => {
@@ -132,35 +133,27 @@ etSearch.oninput = debounce(async (e) => {
     if (rawVal.length < 2) { suggestionsList.classList.add('hidden'); return; }
     const q = optimizeQuery(rawVal);
     try {
-        let url;
-        const encodedQ = encodeURIComponent(q);
-        if (TOMTOM_KEY !== "YOUR_TOMTOM_API_KEY") {
-            url = `https://api.tomtom.com/search/2/search/${encodedQ}.json?key=${TOMTOM_KEY}&countrySet=PK&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=10&radius=100000&typeahead=true&idxSet=Str,Geo,Addr`;
-        } else {
-            url = `https://photon.komoot.io/api/?q=${encodedQ}&lat=${currentPos[1]}&lon=${currentPos[0]}&limit=10`;
-        }
+        const safeQuery = encodeURIComponent(q.trim());
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${safeQuery}&countrycodes=pk&addressdetails=1&limit=10`;
 
         const res = await fetch(url);
         const data = await res.json();
         suggestionsList.innerHTML = '';
         
-        const items = data.results || (data.features ? data.features.map(f => ({ 
-            position: { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] },
-            poi: { name: f.properties.name },
-            address: { freeformAddress: [f.properties.street, f.properties.district, f.properties.city].filter(Boolean).join(", ") }
-        })) : []);
-
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'suggestion-item';
-            const name = item.poi ? item.poi.name : (item.address ? item.address.freeformAddress : "Location");
-            const addr = item.address ? item.address.freeformAddress : "";
-            div.innerHTML = `<div class="sugg-icon">📍</div><div class="sugg-text"><span class="sugg-name">${name}</span><span class="sugg-addr">${addr}</span></div>`;
-            div.onclick = () => { etSearch.value = name; suggestionsList.classList.add('hidden'); handleDestinationSelected([item.position.lon, item.position.lat], name); };
-            suggestionsList.appendChild(div);
-        });
-        if (items.length > 0) suggestionsList.classList.remove('hidden');
-        else suggestionsList.classList.add('hidden');
+        if (data && data.length > 0) {
+            data.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                const name = item.display_name.split(',')[0];
+                const addr = item.display_name;
+                div.innerHTML = `<div class="sugg-icon">📍</div><div class="sugg-text"><span class="sugg-name">${name}</span><span class="sugg-addr">${addr}</span></div>`;
+                div.onclick = () => { etSearch.value = name; suggestionsList.classList.add('hidden'); handleDestinationSelected([parseFloat(item.lon), parseFloat(item.lat)], name); };
+                suggestionsList.appendChild(div);
+            });
+            suggestionsList.classList.remove('hidden');
+        } else {
+            suggestionsList.classList.add('hidden');
+        }
     } catch (e) { suggestionsList.classList.add('hidden'); }
 }, 300);
 
@@ -261,18 +254,47 @@ function getManeuverIcon(m) {
     }
 }
 
-// 🛰️ GLOBAL HANDSHAKE
-window.updateLocation = function(lat, lng, speed, heading) {
-    currentPos = [lng, lat];
-    if (userMarker) {
-        userMarker.setLngLat(currentPos);
-        if (speed > 2.0 && heading !== -1) userMarker.setRotation(heading);
+// 🚀 TASK 2: Map Initialization & Free Camera Panning
+let mapInitialized = false;
+
+window.initializeMapCenter = function(lat, lng) {
+    if (!mapInitialized) {
+        currentPos = [lng, lat];
+        map.jumpTo({ center: currentPos, zoom: 15 }); // Instantly snap, no slow animation
+        mapInitialized = true;
     }
+};
+
+window.updateRealTimeTracking = function(lat, lng, heading) {
+    currentPos = [lng, lat];
+    
+    // 1. Update or Create the Marker
+    if (!userMarker) {
+        userMarker = new maplibregl.Marker({ element: beamEl, rotationAlignment: 'map' })
+            .setLngLat(currentPos)
+            .addTo(map);
+    } else {
+        // Just update the marker's position and direction. 
+        userMarker.setLngLat(currentPos);
+        userMarker.setRotation(heading); 
+    }
+    
     syncDottedLine();
-    if (isNavigating && isCameraFollow) {
-        map.easeTo({ center: currentPos, zoom: 19, pitch: 65, bearing: heading !== -1 ? heading : map.getBearing(), duration: 900 });
+
+    // 🛑 CRITICAL FIX: Removed map.easeTo() camera movement from the loop.
+    // This stops the "Stuck Camera" bug and allows the user to freely pan/zoom.
+    if (isNavigating) {
         updateETADisplay();
     }
+};
+
+// Keep old bridges for compatibility
+window.updateUserLocation = function(lat, lng, heading) {
+    window.updateRealTimeTracking(lat, lng, heading);
+};
+
+window.updateLocation = function(lat, lng, speed, heading) {
+    window.updateRealTimeTracking(lat, lng, heading);
 };
 
 // 🚀 ACTIONS

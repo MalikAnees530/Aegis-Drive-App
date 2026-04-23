@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/windowBackground">
@@ -16,335 +17,390 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:scaleType="fillCenter" />
 
+    <!-- Top Glossy Overlay (Keeping semi-transparent for camera overlay visibility) -->
     <View
         android:layout_width="match_parent"
-        android:layout_height="160dp"
-        android:background="#99000000"
+        android:layout_height="180dp"
+        android:background="@drawable/bg_top_glossy"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- TASK 2.1: HEADER FIX -->
     <LinearLayout
-        android:id="@+id/topLeftPanel"
-        android:layout_width="0dp"
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginStart="20dp"
-        android:layout_marginTop="48dp"
-        android:layout_marginEnd="8dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/topRightPanel">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="24dp"
+        android:paddingTop="54dp"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/topLeftPanel"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="AEGIS"
-            android:textColor="#FFFFFF"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.15"
-            android:fontFamily="sans-serif-condensed" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="DRIVER INTELLIGENCE"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.15" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/aegis_drive"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.1"
+                android:fontFamily="sans-serif-black" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/sensory_intelligence"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.2" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginTop="12dp">
-            <TextView
-                android:id="@+id/tvLiveEar"
+            android:gravity="end">
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/statusOverlay"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="EAR: 0.00"
-                android:textColor="#00E5FF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:fontFamily="monospace"/>
-            <TextView
-                android:id="@+id/tvLiveMar"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+                <TextView
+                    android:id="@+id/tvStatusOverlay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/standby"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="4dp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/liveBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="MAR: 0.00"
-                android:textColor="#00E5FF"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:fontFamily="monospace"/>
+                android:layout_marginTop="6dp"
+                app:cardBackgroundColor="#AAEF4444"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp">
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp">
+                    <View
+                        android:id="@+id/liveDot"
+                        android:layout_width="6dp"
+                        android:layout_height="6dp"
+                        android:background="@android:color/white"
+                        android:layout_marginEnd="6dp" />
+                    <TextView
+                        android:id="@+id/tvLiveText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/offline"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
     </LinearLayout>
 
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/warningBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="#EF4444"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="12dp"
+        app:layout_constraintTop_toBottomOf="@+id/topLeftPanel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="10dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚠️"
+                android:textSize="18sp"
+                android:layout_marginEnd="10dp"
+                tools:ignore="HardcodedText" />
+            <TextView
+                android:id="@+id/tvCriticalWarning"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/danger_eyes_closed"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.05"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Floating Top Data -->
     <LinearLayout
-        android:id="@+id/topRightPanel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="24dp"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintStart_toStartOf="parent">
+        <TextView
+            android:id="@+id/tvLiveEar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/eye_openness_default"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="10sp"
+            android:fontFamily="monospace" />
+        <View
+            android:layout_width="1dp"
+            android:layout_height="10dp"
+            android:background="?attr/colorOutline"
+            android:layout_marginHorizontal="8dp"
+            android:layout_gravity="center_vertical"/>
+        <TextView
+            android:id="@+id/tvLiveMar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mouth_gap_default"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="10sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="end"
-        android:layout_marginEnd="20dp"
-        android:layout_marginTop="48dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/liveBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="#AAEF4444"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeWidth="0dp">
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="10dp"
-                android:paddingVertical="4dp">
-                <View
-                    android:id="@+id/liveDot"
-                    android:layout_width="6dp"
-                    android:layout_height="6dp"
-                    android:background="@drawable/ic_launcher_background"
-                    android:backgroundTint="#FFFFFF"
-                    android:layout_marginEnd="6dp" />
-                <TextView
-                    android:id="@+id/tvLiveText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="OFFLINE"
-                    android:textColor="#FFFFFF"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.1" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="24dp"
+        app:layout_constraintTop_toBottomOf="@id/headerLayout"
+        app:layout_constraintEnd_toEndOf="parent">
         <TextView
             android:id="@+id/tvTimer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="00:00:00"
-            android:textColor="#FFFFFF"
+            android:text="@string/default_timer"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="12sp"
             android:textStyle="bold"
             android:fontFamily="monospace" />
-
         <TextView
             android:id="@+id/tvFPS"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 FPS"
+            android:text="@string/default_fps"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="10sp"
-            android:fontFamily="monospace" />
-            
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="ALERTS"
-            android:layout_marginTop="8dp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="9sp"
-            android:textStyle="bold" />
-        <TextView
-            android:id="@+id/tvAlertCount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0"
-            android:textColor="#FFB74D"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:textSize="10sp" />
     </LinearLayout>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/statusOverlay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="1dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-        <TextView
-            android:id="@+id/tvStatusOverlay"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="● STANDBY"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.10"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="6dp" />
-    </com.google.android.material.card.MaterialCardView>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMuteAlarm"
         android:layout_width="wrap_content"
         android:layout_height="48dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="12dp"
-        android:text="🔕 MUTE ALARM"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/mute_alarm"
         android:textColor="#FFFFFF"
         android:textSize="11sp"
         android:textStyle="bold"
-        android:visibility="gone" 
-        android:insetTop="0dp"
-        android:insetBottom="0dp"
-        app:backgroundTint="#EF5350"
+        android:visibility="gone"
+        app:backgroundTint="#EF4444"
         app:cornerRadius="24dp"
-        app:strokeWidth="2dp"
-        app:strokeColor="#FFCDD2"
-        app:layout_constraintBottom_toTopOf="@+id/metricsRow"
+        app:elevation="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/bottomDashboard"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- TASK 2.3: MODERN BOTTOM DASHBOARD -->
     <LinearLayout
-        android:id="@+id/metricsRow"
+        android:id="@+id/bottomDashboard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="12dp"
-        android:weightSum="3"
+        android:orientation="vertical"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="16dp"
         app:layout_constraintBottom_toTopOf="@+id/safetyScoreCard">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="16dp"
-            app:strokeColor="?attr/colorOutline"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="8dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="AI DETECTION"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="8sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvDetectionIcon"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="–"
-                    android:textSize="20sp"
-                    android:layout_marginTop="2dp" />
-                <TextView
-                    android:id="@+id/tvDetectionLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Waiting..."
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvConfidence"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="–"
-                    android:textColor="?attr/colorPrimary"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:orientation="horizontal"
+            android:weightSum="3">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="4dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="16dp"
-            app:strokeColor="?attr/colorOutline"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- AI Engine Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="8dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="EYE STATE"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="8sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvEyeState"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="–"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ai_engine"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                    <TextView
+                        android:id="@+id/tvDetectionIcon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="–"
+                        android:textSize="20sp"
+                        android:layout_marginTop="2dp"
+                        tools:ignore="HardcodedText" />
+                    <TextView
+                        android:id="@+id/tvDetectionLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/waiting"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="16dp"
-            app:strokeColor="?attr/colorOutline"
-            app:strokeWidth="1dp">
-            <LinearLayout
-                android:layout_width="match_parent"
+            <!-- Eye State Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:padding="8dp">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="DROWSINESS"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="8sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tvDrowsiness"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="–"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:layout_marginTop="8dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                android:layout_weight="1"
+                android:layout_marginHorizontal="4dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/eye_state"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                    <TextView
+                        android:id="@+id/tvEyeState"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="–"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="8dp"
+                        tools:ignore="HardcodedText" />
+                    <TextView
+                        android:id="@+id/tvConfidence"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="–"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="10sp"
+                        tools:ignore="HardcodedText" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
+            <!-- Alerts Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="?attr/colorOutline"
+                app:strokeWidth="1dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:padding="8dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/alerts"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.1" />
+                    <TextView
+                        android:id="@+id/tvAlertCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#F59E0B"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="2dp"
+                        tools:ignore="HardcodedText" />
+                    <TextView
+                        android:id="@+id/tvDrowsiness"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/stable"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
     </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/safetyScoreCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="16dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="0dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="20dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
+        app:cardCornerRadius="20dp"
+        app:cardElevation="2dp"
         app:strokeColor="?attr/colorOutline"
         app:strokeWidth="1dp"
         app:layout_constraintBottom_toTopOf="@+id/btnStopMonitor">
@@ -366,16 +422,16 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="OVERALL SAFETY SCORE"
+                    android:text="@string/telemetry_safety_index"
                     android:textColor="?attr/colorOnSurfaceVariant"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.1" />
                 <TextView
                     android:id="@+id/tvSafetyScore"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="100%"
+                    android:text="@string/full_score"
                     android:textColor="#6ABF69"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -398,16 +454,16 @@
         android:layout_height="60dp"
         android:insetTop="0dp"
         android:insetBottom="0dp"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="24dp"
-        android:text="BEGIN MONITORING"
+        android:text="@string/begin_monitoring"
         android:textSize="14sp"
         android:textStyle="bold"
-        android:letterSpacing="0.15"
+        android:letterSpacing="0.1"
         android:textColor="?attr/colorOnPrimary"
         app:backgroundTint="?attr/colorPrimary"
-        app:strokeWidth="0dp"
         app:cornerRadius="16dp"
+        app:elevation="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
