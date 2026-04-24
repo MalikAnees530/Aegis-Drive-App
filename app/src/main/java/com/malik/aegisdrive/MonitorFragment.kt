@@ -129,6 +129,16 @@ class MonitorFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_monitor, container, false)
     }
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            startCamera()
+        } else {
+            AegisNotify.show(requireContext(), "Camera permission is required for monitoring", AegisNotify.Type.WARNING)
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
@@ -170,7 +180,7 @@ class MonitorFragment : Fragment() {
 
         btnStopMonitor.setOnClickListener {
             if (!hasCameraPermission()) {
-                requestCameraPermission()
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA)
                 return@setOnClickListener
             }
             if (isMonitoring) stopMonitoring() else startMonitoring()
@@ -768,9 +778,4 @@ class MonitorFragment : Fragment() {
     }
 
     private fun hasCameraPermission() = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-    private fun requestCameraPermission() = requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_CODE)
-
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == CAMERA_PERMISSION_CODE && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) startCamera()
-    }
 }
