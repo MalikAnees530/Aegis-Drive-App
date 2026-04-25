@@ -1,12 +1,30 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services)
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
+}
+
 android {
     namespace = "com.malik.aegisdrive"
     compileSdk = 35
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(localProperties.getProperty("keystore.path") ?: "")
+            storePassword = localProperties.getProperty("keystore.pwd")
+            keyAlias = localProperties.getProperty("signkey.alias")
+            keyPassword = localProperties.getProperty("signkey.pwd")
+        }
+    }
 
     defaultConfig {
         applicationId = "com.malik.aegisdrive"
@@ -19,6 +37,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
