@@ -1,16 +1,7 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.google.services)
-}
-
-val localProperties = Properties()
-val localPropertiesFile = rootProject.file("local.properties")
-if (localPropertiesFile.exists()) {
-    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -19,10 +10,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(localProperties.getProperty("keystore.path") ?: "")
-            storePassword = localProperties.getProperty("keystore.pwd")
-            keyAlias = localProperties.getProperty("signkey.alias")
-            keyPassword = localProperties.getProperty("signkey.pwd")
+            storeFile = file(System.getenv("KEYSTORE_PATH") ?: "aegis_drive.jks")
+            storePassword = System.getenv("KEYSTORE_PWD")
+            keyAlias = System.getenv("SIGNKEY_ALIAS")
+            keyPassword = System.getenv("SIGNKEY_PWD")
         }
     }
 
