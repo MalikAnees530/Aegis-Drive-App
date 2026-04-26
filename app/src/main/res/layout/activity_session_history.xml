@@ -5,14 +5,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/windowBackground"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
 
     <!-- ══ TOP HEADER ══ -->
     <RelativeLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="20dp"
+        android:paddingHorizontal="24dp"
         android:paddingTop="28dp"
         android:paddingBottom="12dp">
 
@@ -26,14 +27,14 @@
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1dp">
-            <TextView
-                android:id="@+id/tvBackArrow"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="←"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="20sp" />
+            <ImageView
+                android:id="@+id/ivBackArrow"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_back"
+                android:scaleType="centerInside"
+                app:tint="?attr/colorOnSurface" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -89,7 +90,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingHorizontal="20dp"
-        android:paddingBottom="40dp" />
+        android:paddingHorizontal="24dp"
+        android:paddingBottom="48dp" />
 
 </LinearLayout>

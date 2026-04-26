@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -70,7 +71,7 @@ class SessionHistoryActivity : AppCompatActivity() {
         val root = findViewById<View>(R.id.historyRoot)
         val tvHeader = findViewById<TextView>(R.id.tvHistoryHeader)
         val btnBackCard = findViewById<MaterialCardView>(R.id.btnBack)
-        val tvBackArrow = findViewById<TextView>(R.id.tvBackArrow)
+        val ivBackArrow = findViewById<ImageView>(R.id.ivBackArrow)
 
         val bgColor = if (isDarkMode) "#121212" else "#F8F9FA"
         val txtColor = if (isDarkMode) "#FFFFFF" else "#1F1F1F"
@@ -81,7 +82,7 @@ class SessionHistoryActivity : AppCompatActivity() {
         tvHeader?.setTextColor(Color.parseColor(txtColor))
         btnBackCard?.setCardBackgroundColor(Color.parseColor(cardBg))
         btnBackCard?.setStrokeColor(Color.parseColor(strokeColor))
-        tvBackArrow?.setTextColor(Color.parseColor(txtColor))
+        ivBackArrow?.setColorFilter(Color.parseColor(txtColor))
     }
 
     private fun startHistorySync() {

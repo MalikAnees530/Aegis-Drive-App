@@ -314,7 +314,17 @@ class ChatFragment : Fragment() {
             val writer = OutputStreamWriter(conn.outputStream); writer.write(body.toString()); writer.flush(); writer.close()
             if (conn.responseCode == 200) JSONObject(conn.inputStream.bufferedReader().readText()).getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content")
             else "Connection unstable. (Code: ${conn.responseCode})"
-        } catch (e: Exception) { "Interlink failure: ${e.message}" }
+        } catch (e: Exception) {
+            if (e is java.net.UnknownHostException || e.message?.contains("Unable to resolve host") == true) {
+                "Aegis Cloud connection offline. Please verify your internet connection and try again."
+            } else {
+                "Interlink failure: ${e.message}"
+            }
+        }
+    }
+
+    private fun cleanAiResponse(raw: String): String {
+        return raw.replace(Regex("[-=*_~]{3,}"), "").trim()
     }
 
     private fun addUserMessage(text: String, scroll: Boolean = true) {
@@ -517,7 +527,7 @@ class ChatFragment : Fragment() {
 
     private fun speak(t: String) { 
         if (ttsReady && t.isNotEmpty()) {
-            val cleanText = t.replace(Regex("[*#_~`>+]"), "").replace("\n", " ")
+            val cleanText = cleanAiResponse(t).replace(Regex("[*#_~`>+]"), "").replace("\n", " ")
             tts?.language = Locale.US
             val params = Bundle().apply { putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "AI_MSG") }
             isTtsSpeaking = true
@@ -531,5 +541,12 @@ class ChatFragment : Fragment() {
     }
     private fun scrollToBottom() { chatScrollView.post { chatScrollView.fullScroll(ScrollView.FOCUS_DOWN) } }
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
-    override fun onDestroyView() { super.onDestroyView(); isVoiceMode = false; speechRecognizer?.destroy(); tts?.shutdown(); activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.unregisterOnSharedPreferenceChangeListener(sharedPrefsListener) }
+    override fun onDestroyView() { 
+        super.onDestroyView()
+        isVoiceMode = false
+        speechRecognizer?.destroy()
+        tts?.shutdown()
+        activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)
+            ?.unregisterOnSharedPreferenceChangeListener(sharedPrefsListener) 
+    }
 }

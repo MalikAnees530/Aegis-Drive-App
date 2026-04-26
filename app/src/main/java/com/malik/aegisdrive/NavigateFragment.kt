@@ -74,9 +74,8 @@ class NavigateFragment : Fragment(), SensorEventListener {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 databaseEnabled = true
-                cacheMode = WebSettings.LOAD_DEFAULT
+                cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
                 mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                // Note: setRenderPriority is deprecated but added for legacy compatibility if needed
                 @Suppress("DEPRECATION")
                 setRenderPriority(WebSettings.RenderPriority.HIGH)
             }
@@ -123,7 +122,11 @@ class NavigateFragment : Fragment(), SensorEventListener {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     val text = matches[0]
-                    handler.post { webView.evaluateJavascript("window.onVoiceResult('$text');", null) }
+                    // Trigger immediate search and update UI
+                    handler.post { 
+                        webView.evaluateJavascript("window.onVoiceResult('$text');", null)
+                        webView.evaluateJavascript("window.performSearch('$text');", null)
+                    }
                 }
             }
             override fun onReadyForSpeech(p0: Bundle?) {}
@@ -160,10 +163,14 @@ class NavigateFragment : Fragment(), SensorEventListener {
     }
 
     // 🚀 TASK 2.3: Bridge to JS (updateRealTimeTracking)
+    private var lastUpdateTimestamp = 0L
     private fun updateMapMarker() {
         if (!::webView.isInitialized || !isAdded) return
+        val now = System.currentTimeMillis()
+        if (now - lastUpdateTimestamp < 100) return // Throttle to 10Hz to prevent JS thread saturation
+        lastUpdateTimestamp = now
         handler.post { 
-            webView.evaluateJavascript("javascript:updateRealTimeTracking($currentLat, $currentLng, $currentHeading);", null) 
+            if (isAdded) webView.evaluateJavascript("javascript:updateRealTimeTracking($currentLat, $currentLng, $currentHeading);", null) 
         }
     }
 
@@ -184,20 +191,20 @@ class NavigateFragment : Fragment(), SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     private fun syncPassiveSafetyStatus() {
-        if (!::webView.isInitialized) return
+        if (!::webView.isInitialized || !isAdded) return
         val score = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE).getInt("LAST_SCORE", 100)
-        handler.post { webView.evaluateJavascript("window.updateSafetyScore($score);", null) }
+        handler.post { if (isAdded) webView.evaluateJavascript("window.updateSafetyScore($score);", null) }
     }
 
     private fun getLastKnownLocation() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
+        if (!isAdded || ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return
         fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
             location?.let { 
                 currentLat = it.latitude
                 currentLng = it.longitude
                 // 🚀 TASK 1: Eradicate "Blue Screen" with Instant Snap
                 handler.post { 
-                    webView.evaluateJavascript("javascript:initializeMapCenter(${it.latitude}, ${it.longitude});", null) 
+                    if (isAdded) webView.evaluateJavascript("javascript:initializeMapCenter(${it.latitude}, ${it.longitude});", null) 
                 }
                 updateMapMarker()
             }
@@ -217,6 +224,7 @@ class NavigateFragment : Fragment(), SensorEventListener {
     }
 
     private fun checkAndExecuteCommands() {
+        if (!isAdded) return
         val prefs = requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE)
         val cmd = prefs.getString("NAV_CMD", null)
         if (cmd == "START") {
@@ -228,10 +236,12 @@ class NavigateFragment : Fragment(), SensorEventListener {
             
             if (lat != 0f) {
                 handler.postDelayed({
-                    webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], '$name');", null)
-                    handler.postDelayed({
-                        webView.evaluateJavascript("document.getElementById('btnStartDrive').click();", null)
-                    }, 1500)
+                    if (isAdded) {
+                        webView.evaluateJavascript("window.handleDestinationSelected([$lon, $lat], '$name');", null)
+                        handler.postDelayed({
+                            if (isAdded) webView.evaluateJavascript("document.getElementById('btnStartDrive').click();", null)
+                        }, 1500)
+                    }
                 }, 1000)
             }
         }
@@ -249,7 +259,9 @@ class NavigateFragment : Fragment(), SensorEventListener {
 
     override fun onDestroy() {
         super.onDestroy()
+        speechRecognizer?.setRecognitionListener(null)
         speechRecognizer?.destroy()
+        speechRecognizer = null
         requireActivity().getSharedPreferences("AegisData", Context.MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(sharedPrefsListener)
     }
 
@@ -309,6 +321,32 @@ class NavigateFragment : Fragment(), SensorEventListener {
             } else {
                 handler.post { AegisNotify.show(mContext, "Please set your Home location first.", AegisNotify.Type.WARNING) }
             }
+        }
+
+        @JavascriptInterface
+        fun isNetworkAvailable(): Boolean {
+            val cm = mContext.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val netInfo = cm.activeNetworkInfo
+            return netInfo != null && netInfo.isConnected
+        }
+
+        @JavascriptInterface
+        fun saveSearchHistory(name: String, lat: Double, lon: Double) {
+            val prefs = requireActivity().getSharedPreferences("AegisSearchCache", Context.MODE_PRIVATE)
+            val history = prefs.getString("history", "") ?: ""
+            val newEntry = "$name|$lat|$lon"
+            
+            // Keep last 50, remove duplicates
+            val list = history.split(";").filter { it.isNotEmpty() && !it.startsWith("$name|") }.toMutableList()
+            list.add(0, newEntry)
+            if (list.size > 50) list.removeAt(list.size - 1)
+            
+            prefs.edit().putString("history", list.joinToString(";")).apply()
+        }
+
+        @JavascriptInterface
+        fun getSearchHistory(): String {
+            return requireActivity().getSharedPreferences("AegisSearchCache", Context.MODE_PRIVATE).getString("history", "") ?: ""
         }
     }
 }

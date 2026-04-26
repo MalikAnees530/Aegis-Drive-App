@@ -4,13 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?android:attr/windowBackground"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
 
     <!-- ══ TOP HEADER ══ -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="20dp"
+        android:paddingHorizontal="24dp"
         android:paddingTop="28dp"
         android:paddingBottom="12dp">
 
@@ -26,13 +27,13 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center"
-                android:text="←"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="20sp" />
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_back"
+                android:scaleType="centerInside"
+                app:tint="?attr/colorOnSurface" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -60,14 +61,16 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true"
-        android:overScrollMode="never">
+        android:overScrollMode="never"
+        android:scrollbars="none"
+        android:clipToPadding="false"
+        android:paddingBottom="48dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingBottom="40dp">
+            android:paddingHorizontal="32dp">
 
             <!-- ══ HERO PROFILE SECTION ══ -->
             <LinearLayout
@@ -451,7 +454,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="v1.0"
+                            android:text="v1.1"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -470,7 +473,7 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.1"
-                android:textColor="?attr/colorOnPrimary"
+                android:textColor="@android:color/white"
                 app:backgroundTint="#EF5350"
                 app:cornerRadius="20dp"
                 app:elevation="2dp" />

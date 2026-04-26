@@ -5,16 +5,18 @@
     android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="?android:attr/windowBackground"
+    android:fitsSystemWindows="true">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fitsSystemWindows="true">
 
         <!-- 🚀 PREMIUM AEGIS HEADER -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/chatHeader"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
             app:cardBackgroundColor="?attr/colorSurface"
@@ -22,7 +24,9 @@
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1.5dp"
-            app:layout_constraintTop_toTopOf="parent">
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -56,9 +60,7 @@
                     android:layout_marginStart="14dp"
                     android:layout_marginEnd="8dp"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    app:layout_constraintStart_toEndOf="@id/btnMenu"
-                    app:layout_constraintEnd_toStartOf="@id/btnNewChat">
+                    android:gravity="center_vertical">
                     
                     <TextView
                         android:layout_width="wrap_content"
@@ -114,21 +116,25 @@
         <!-- CHAT MESSAGES AREA -->
         <ScrollView
             android:id="@+id/chatScrollView"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginHorizontal="16dp"
-            android:paddingBottom="12dp"
             android:clipToPadding="false"
             android:overScrollMode="never"
+            android:scrollbars="none"
+            android:paddingBottom="48dp"
             app:layout_constraintTop_toBottomOf="@id/chatHeader"
-            app:layout_constraintBottom_toTopOf="@id/audioControlPanel">
+            app:layout_constraintBottom_toTopOf="@id/audioControlPanel"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:id="@+id/chatMessagesContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingTop="12dp"/>
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp"/>
         </ScrollView>
 
         <!-- 🚀 LEAD UI/UX: PERSISTENT AUDIO ACTION ORBS -->
@@ -137,7 +143,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:visibility="visible"
             app:layout_constraintBottom_toTopOf="@id/quickChipsRow"
             app:layout_constraintEnd_toEndOf="@id/chatInputBar">
@@ -204,11 +210,13 @@
         <!-- QUICK ACTION CHIPS -->
         <HorizontalScrollView
             android:id="@+id/quickChipsRow"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="12dp"
             android:scrollbars="none"
-            app:layout_constraintBottom_toTopOf="@id/chatInputBar">
+            app:layout_constraintBottom_toTopOf="@id/chatInputBar"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -247,16 +255,18 @@
         <!-- MODERN INPUT BAR -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/chatInputBar"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             app:cardBackgroundColor="?attr/colorSurface"
             app:cardCornerRadius="30dp"
             app:cardElevation="8dp"
             app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1.5dp"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -326,7 +336,8 @@
         android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:background="?attr/colorSurface">
+        android:background="?attr/colorSurface"
+        android:fitsSystemWindows="true">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -383,12 +394,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:overScrollMode="never"
-                    android:padding="12dp">
+                    android:scrollbars="none"
+                    android:clipToPadding="false"
+                    android:paddingBottom="48dp">
                     <LinearLayout
                         android:id="@+id/sessionsContainer"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"/>
+                        android:orientation="vertical"
+                        android:padding="12dp"/>
                 </ScrollView>
             </com.google.android.material.card.MaterialCardView>
 
