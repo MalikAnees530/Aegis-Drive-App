@@ -57,6 +57,12 @@ class FaceLandmarkerHelper(
         detectAsync(mpImage, frameTime)
     }
 
+    fun detectBitmap(bitmap: Bitmap) {
+        val frameTime = SystemClock.uptimeMillis()
+        val mpImage = BitmapImageBuilder(bitmap).build()
+        detectAsync(mpImage, frameTime)
+    }
+
     fun detectAsync(mpImage: MPImage, frameTime: Long) {
         faceLandmarker?.detectAsync(mpImage, frameTime)
     }
