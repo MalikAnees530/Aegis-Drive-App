@@ -24,6 +24,36 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew assembleDebug
 
+    - name: Infrastructure Security & Access Control
+      run: |
+        echo "🛡️ Starting Infrastructure Security Audit..."
+        
+        # Identify changed files relative to main
+        CHANGED_FILES=$(git diff --name-only origin/main)
+        echo "Detected changes in: "
+        echo "$CHANGED_FILES"
+
+        # Protected paths pattern
+        PROTECTED_PATTERN="^.github/|^README.md$|^LICENSE$|^SECURITY.md$|^CONTRIBUTING.md$|^CODE_OF_CONDUCT.md$"
+
+        # Check for modifications to protected infrastructure
+        INFRA_CHANGES=$(echo "$CHANGED_FILES" | grep -E "$PROTECTED_PATTERN" || true)
+
+        if [[ -n "$INFRA_CHANGES" ]]; then
+          echo "⚠️ Protected infrastructure modifications detected:"
+          echo "$INFRA_CHANGES"
+          
+          if [[ "${{ github.actor }}" != "MalikAnees530" ]]; then
+            echo "❌ CRITICAL: Unauthorized modification of repository infrastructure detected. Access Denied."
+            echo "User '${{ github.actor }}' is not authorized to modify core repository configuration or administrative documentation."
+            exit 1
+          else
+            echo "✅ Authorization Verified: Lead Engineer modification detected."
+          fi
+        else
+          echo "✅ No core infrastructure changes detected. Proceeding."
+        fi
+
     - name: Governance & Documentation Integrity Check
       run: |
         echo "Verifying administrative documentation existence..."
