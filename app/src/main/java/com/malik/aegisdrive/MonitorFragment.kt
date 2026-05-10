@@ -146,7 +146,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         
         pbSafetyScore.max = 100 
 
-        // 🚀 SAFE PROGRAMMATIC ADDITION: Prevent duplicates and lag
+        // ≡ƒÜÇ SAFE PROGRAMMATIC ADDITION: Prevent duplicates and lag
         val parent = cameraPreview.parent as ViewGroup
         var existingOverlay: FaceOverlayView? = null
         for (i in 0 until parent.childCount) {
@@ -176,7 +176,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         setUIMonitoringState(false)
         btnMuteAlarm.visibility = View.GONE
 
-        // 🚀 PERMISSION FIX: Only check, don't auto-request on every creation to avoid loop
+        // ≡ƒÜÇ PERMISSION FIX: Only check, don't auto-request on every creation to avoid loop
         if (hasCameraPermission()) startCamera()
 
         btnStopMonitor.setOnClickListener {
@@ -231,7 +231,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             }
 
             if (vibrator.hasVibrator()) {
-                // 🚀 HIGH PRIORITY: Use USAGE_ALARM to bypass certain system restrictions and ensure visibility
+                // ≡ƒÜÇ HIGH PRIORITY: Use USAGE_ALARM to bypass certain system restrictions and ensure visibility
                 val audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -263,7 +263,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         if (vibrationEnabled) {
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastVibrationTime > 1500) { // Vibrate every 1.5s during danger
-                triggerVibration(1000) // 🚀 Increased to 1s for better feedback
+                triggerVibration(1000) // ≡ƒÜÇ Increased to 1s for better feedback
                 lastVibrationTime = currentTime
             }
         }
@@ -355,7 +355,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
         val durationSeconds = elapsedSeconds
         val focusLevel = (finalScore - (totalAlerts * 4)).coerceIn(0, 100)
 
-        // 🚀 TACTICAL PIVOT: Flat Schema session data
+        // ≡ƒÜÇ TACTICAL PIVOT: Flat Schema session data
         val sessionData = hashMapOf(
             "userId" to uid,
             "score" to finalScore,
@@ -367,7 +367,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             "dateString" to SimpleDateFormat("MMM dd, yyyy - hh:mm a", Locale.getDefault()).format(Date())
         )
 
-        // 🚀 BATCH WRITE: Root DriveSessions + User Stats
+        // ≡ƒÜÇ BATCH WRITE: Root DriveSessions + User Stats
         val batch = db.batch()
         val sessionRef = db.collection("DriveSessions").document()
         val userRef = db.collection("users").document(uid)
@@ -418,12 +418,12 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             liveBadgeCard.setCardBackgroundColor(ColorStateList.valueOf("#AAEF4444".toColorInt()))
             tvLiveText.text = getString(R.string.offline)
             setStatus(getString(R.string.standby), "#94A3B8")
-            tvDetectionIcon.text = "–"
+            tvDetectionIcon.text = "ΓÇô"
             tvDetectionLabel.text = getString(R.string.waiting)
             tvDetectionLabel.setTextColor("#64748B".toColorInt())
-            tvConfidence.text = "–"
+            tvConfidence.text = "ΓÇô"
             tvConfidence.setTextColor("#38BDF8".toColorInt())
-            tvEyeState.text = "–"
+            tvEyeState.text = "ΓÇô"
             tvEyeState.setTextColor("#FFFFFF".toColorInt())
             tvDrowsiness.text = getString(R.string.stable)
             tvDrowsiness.setTextColor("#94A3B8".toColorInt())
@@ -495,10 +495,6 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
     override fun onResults(result: com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult, inputImage: com.google.mediapipe.framework.image.MPImage) {
         if (!isMonitoring) return
 
-        activity?.runOnUiThread {
-            faceOverlay.setResults(result, inputImage.height, inputImage.width)
-        }
-
         if (result.faceLandmarks().isNotEmpty()) {
             framesWithoutFace = 0 
             
@@ -515,9 +511,10 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             activity?.runOnUiThread {
                 tvLiveEar.text = String.format(Locale.US, "Eye Openness: %.2f", avgEar)
                 tvLiveMar.text = String.format(Locale.US, "Mouth Gap: %.2f", mar)
+                faceOverlay.updateData(leftEyePoints, rightEyePoints, lipPoints, inputImage.width, inputImage.height)
             }
 
-            // 🚀 TASK 1: EXTREME PERSPECTIVE IGNORING & ADVANCED THRESHOLDING
+            // ≡ƒÜÇ TASK 1: EXTREME PERSPECTIVE IGNORING & ADVANCED THRESHOLDING
             val nose = landmarks[1]
             val topHead = landmarks[10]
             val chin = landmarks[152]
@@ -671,27 +668,27 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
 
         when (labelIndex) {
             0 -> { 
-                tvDetectionIcon.text = "🛡️"
+                tvDetectionIcon.text = "≡ƒ¢í∩╕Å"
                 tvDetectionLabel.setTextColor("#22C55E".toColorInt())
                 tvDrowsiness.text = "Optimized"
                 tvDrowsiness.setTextColor("#22C55E".toColorInt())
-                setStatus("● SECURE", "#22C55E")
+                setStatus("ΓùÅ SECURE", "#22C55E")
                 safetyScore = minOf(100f, safetyScore + 1.0f) 
             }
             1 -> { 
-                tvDetectionIcon.text = "😴"
+                tvDetectionIcon.text = "≡ƒÿ┤"
                 tvDetectionLabel.setTextColor("#EF4444".toColorInt())
                 tvDrowsiness.text = "Danger" 
                 tvDrowsiness.setTextColor("#EF4444".toColorInt())
-                setStatus("● DANGER", "#EF4444")
+                setStatus("ΓùÅ DANGER", "#EF4444")
                 safetyScore = maxOf(0f, safetyScore - 1.5f) 
             }
             2 -> { 
-                tvDetectionIcon.text = "🥱"
+                tvDetectionIcon.text = "≡ƒÑ▒"
                 tvDetectionLabel.setTextColor("#F59E0B".toColorInt())
                 tvDrowsiness.text = "Fatigue" 
                 tvDrowsiness.setTextColor("#F59E0B".toColorInt())
-                setStatus("● WARNING", "#F59E0B")
+                setStatus("ΓùÅ WARNING", "#F59E0B")
                 safetyScore = maxOf(0f, safetyScore - 0.5f)
             }
         }
@@ -709,7 +706,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
             prefs.edit().putInt("LAST_SCORE", scoreInt).apply()
         } catch (e: Exception) { }
 
-    // 🚀 UPDATED COLOR THRESHOLD TO 50
+    // ≡ƒÜÇ UPDATED COLOR THRESHOLD TO 50
     val color = when {
         safetyScore > 75 -> "#6ABF69"
         safetyScore > 50 -> "#FFB74D" 
@@ -717,7 +714,7 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
     }
     pbSafetyScore.progressTintList = ColorStateList.valueOf(android.graphics.Color.parseColor(color))
 
-    // 🚀 UPDATED ALARM THRESHOLD TO 50
+    // ≡ƒÜÇ UPDATED ALARM THRESHOLD TO 50
     if (safetyScore <= 50f) {
         if (isManuallyMuted) {
             if (System.currentTimeMillis() - muteTimestamp > 10000) { 
@@ -752,7 +749,6 @@ class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
 
     private fun bindViews(view: View) {
         cameraPreview    = view.findViewById(R.id.cameraPreview)
-        faceOverlay      = view.findViewById(R.id.faceOverlay)
         tvTimer          = view.findViewById(R.id.tvTimer)
         tvFPS            = view.findViewById(R.id.tvFPS)
         tvLiveEar        = view.findViewById(R.id.tvLiveEar)
