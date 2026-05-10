@@ -67,6 +67,11 @@ class FaceLandmarkerHelper(
         faceLandmarker?.detectAsync(mpImage, frameTime)
     }
 
+    fun close() {
+        faceLandmarker?.close()
+        faceLandmarker = null
+    }
+
     private fun returnLivestreamResult(
         result: FaceLandmarkerResult,
         inputImage: MPImage

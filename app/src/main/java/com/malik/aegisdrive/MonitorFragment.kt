@@ -51,7 +51,7 @@ import java.util.concurrent.Executors
 import kotlin.math.sqrt
 
 @SuppressLint("SetTextI18n") 
-class MonitorFragment : Fragment() {
+class MonitorFragment : Fragment(), FaceLandmarkerHelper.LandmarkerListener {
 
     private lateinit var cameraPreview: PreviewView
     private lateinit var faceOverlay: FaceOverlayView
@@ -78,7 +78,7 @@ class MonitorFragment : Fragment() {
 
     private var cameraExecutor: ExecutorService? = null
     private var tfliteInterpreter: Interpreter? = null
-    private var faceLandmarker: FaceLandmarker? = null
+    private lateinit var faceLandmarkerHelper: FaceLandmarkerHelper
     private var cameraProvider: ProcessCameraProvider? = null
 
     private var mediaPlayer: MediaPlayer? = null
@@ -312,7 +312,7 @@ class MonitorFragment : Fragment() {
         cameraExecutor?.shutdown()
         cameraExecutor = null
         tfliteInterpreter?.close()
-        faceLandmarker?.close()
+        if (::faceLandmarkerHelper.isInitialized) faceLandmarkerHelper.close()
         mediaPlayer?.release()
         mediaPlayer = null
     }
@@ -484,121 +484,122 @@ class MonitorFragment : Fragment() {
                 activity?.runOnUiThread { tvFPS.text = "$fps FPS" }
             }
 
-            val rawBitmap = imageProxy.toBitmap()
-            val argbBitmap = rawBitmap.copy(Bitmap.Config.ARGB_8888, true)
+            faceLandmarkerHelper.detectLiveStream(imageProxy)
+        } catch (e: Exception) { 
+            Log.e(TAG, "Analysis error: ${e.message}")
+            imageProxy.close()
+        }
+    }
+
+    override fun onResults(result: com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult, inputImage: com.google.mediapipe.framework.image.MPImage) {
+        if (!isMonitoring) return
+
+        activity?.runOnUiThread {
+            faceOverlay.setResults(result, inputImage.height, inputImage.width)
+        }
+
+        if (result.faceLandmarks().isNotEmpty()) {
+            framesWithoutFace = 0 
             
-            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-            val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-            val rotatedBitmap = Bitmap.createBitmap(argbBitmap, 0, 0, argbBitmap.width, argbBitmap.height, matrix, true)
-            
-            val mpImage = BitmapImageBuilder(rotatedBitmap).build()
-            val result = faceLandmarker?.detect(mpImage)
+            val landmarks = result.faceLandmarks()[0]
+            val rightEyePoints = rightEyeIdx.map { landmarks[it] }
+            val leftEyePoints = leftEyeIdx.map { landmarks[it] }
+            val lipPoints = lipsIdx.map { landmarks[it] }
 
-            if (result != null && result.faceLandmarks().isNotEmpty()) {
-                framesWithoutFace = 0 
-                
-                val landmarks = result.faceLandmarks()[0]
-                val rightEyePoints = rightEyeIdx.map { landmarks[it] }
-                val leftEyePoints = leftEyeIdx.map { landmarks[it] }
-                val lipPoints = lipsIdx.map { landmarks[it] }
+            val rightEar = calculateEAR(rightEyePoints)
+            val leftEar = calculateEAR(leftEyePoints)
+            val avgEar = (rightEar + leftEar) / 2.0f
+            val mar = calculateMAR(lipPoints)
 
-                val rightEar = calculateEAR(rightEyePoints)
-                val leftEar = calculateEAR(leftEyePoints)
-                val avgEar = (rightEar + leftEar) / 2.0f
-                val mar = calculateMAR(lipPoints)
+            activity?.runOnUiThread {
+                tvLiveEar.text = String.format(Locale.US, "Eye Openness: %.2f", avgEar)
+                tvLiveMar.text = String.format(Locale.US, "Mouth Gap: %.2f", mar)
+            }
 
-                activity?.runOnUiThread {
-                    tvLiveEar.text = String.format(Locale.US, "Eye Openness: %.2f", avgEar)
-                    tvLiveMar.text = String.format(Locale.US, "Mouth Gap: %.2f", mar)
-                }
+            // 🚀 TASK 1: EXTREME PERSPECTIVE IGNORING & ADVANCED THRESHOLDING
+            val nose = landmarks[1]
+            val topHead = landmarks[10]
+            val chin = landmarks[152]
+            val leftEyeInner = landmarks[133]
+            val rightEyeInner = landmarks[362]
 
-                // 🚀 TASK 1: EXTREME PERSPECTIVE IGNORING & ADVANCED THRESHOLDING
-                val nose = landmarks[1]
-                val topHead = landmarks[10]
-                val chin = landmarks[152]
-                val leftEyeInner = landmarks[133]
-                val rightEyeInner = landmarks[362]
+            // 1. Calculate Pitch (Up/Down) & Yaw (Left/Right)
+            val upperFace = distance(topHead, nose)
+            val lowerFace = distance(nose, chin)
+            val pitchRatio = if (upperFace > 0) lowerFace / upperFace else 1.0f
 
-                // 1. Calculate Pitch (Up/Down) & Yaw (Left/Right)
-                val upperFace = distance(topHead, nose)
-                val lowerFace = distance(nose, chin)
-                val pitchRatio = if (upperFace > 0) lowerFace / upperFace else 1.0f
+            val leftDist = distance(leftEyeInner, nose)
+            val rightDist = distance(rightEyeInner, nose)
+            val yawRatio = maxOf(leftDist, rightDist) / minOf(leftDist, rightDist).coerceAtLeast(0.001f)
 
-                val leftDist = distance(leftEyeInner, nose)
-                val rightDist = distance(rightEyeInner, nose)
-                val yawRatio = maxOf(leftDist, rightDist) / minOf(leftDist, rightDist).coerceAtLeast(0.001f)
+            // 2. EXTREME ANGLE DEADZONE CHECK
+            val isExtremeAngle = yawRatio > 2.0f || pitchRatio > 1.6f || pitchRatio < 0.6f
 
-                // 2. EXTREME ANGLE DEADZONE CHECK
-                // If the head is turned extremely far, assume eyes are open to prevent false alarms
-                val isExtremeAngle = yawRatio > 2.0f || pitchRatio > 1.6f || pitchRatio < 0.6f
+            // 3. ULTRA-PRECISE DYNAMIC THRESHOLD
+            val dynamicEarThreshold = when {
+                pitchRatio > 1.35f -> 0.06f
+                pitchRatio > 1.20f -> 0.09f
+                yawRatio > 1.6f -> 0.06f
+                yawRatio > 1.3f -> 0.10f
+                mar > 0.40f -> 0.12f
+                else -> 0.16f
+            }
 
-                // 3. ULTRA-PRECISE DYNAMIC THRESHOLD (Even more aggressive drop)
-                val dynamicEarThreshold = when {
-                    pitchRatio > 1.35f -> 0.06f // Looking heavily upward: drastic drop
-                    pitchRatio > 1.20f -> 0.09f // Looking slightly upward
-                    yawRatio > 1.6f -> 0.06f    // Extreme Left/Right
-                    yawRatio > 1.3f -> 0.10f    // Moderate Left/Right
-                    mar > 0.40f -> 0.12f        // Yawning
-                    else -> 0.16f               // Normal precise posture
-                }
-
-                // 4. INSTANT STATE EVALUATION WITH DEADZONE OVERRIDE
-                if (isExtremeAngle) {
+            // 4. INSTANT STATE EVALUATION
+            if (isExtremeAngle) {
+                openEyeFrames++
+                closedEyeFrames = 0
+            } else {
+                if (avgEar < dynamicEarThreshold) {
+                    closedEyeFrames++
+                    openEyeFrames = 0
+                } else {
                     openEyeFrames++
                     closedEyeFrames = 0
-                } else {
-                    if (avgEar < dynamicEarThreshold) {
-                        closedEyeFrames++
-                        openEyeFrames = 0
-                    } else {
-                        openEyeFrames++
-                        closedEyeFrames = 0
-                    }
-                }
-
-                activity?.runOnUiThread {
-                    // 4. INSTANT UI RESPONSE (Trigger on 2 frames for immediate visual feedback)
-                    if (closedEyeFrames >= 2) {
-                        tvEyeState.text = "Closed"
-                        tvEyeState.setTextColor(android.graphics.Color.parseColor("#EF5350"))
-                        warningBanner.visibility = View.VISIBLE 
-                        
-                        if (closedEyeFrames % 10 == 0) triggerVibration(200) 
-                    } else if (openEyeFrames >= 1) { // Instant recovery to Open
-                        tvEyeState.text = "Open"
-                        tvEyeState.setTextColor(android.graphics.Color.parseColor("#6ABF69"))
-                        warningBanner.visibility = View.GONE 
-                    }
-                }
-
-                faceOverlay.updateData(leftEyePoints, rightEyePoints, lipPoints, rotatedBitmap.width, rotatedBitmap.height)
-
-                if (frameSequence.size == sequenceLength) frameSequence.removeFirst()
-                frameSequence.addLast(floatArrayOf(avgEar, mar))
-
-                if (frameSequence.size == sequenceLength) {
-                    runLSTMInference(avgEar, mar)
-                } else {
-                    activity?.runOnUiThread {
-                        tvDetectionLabel.text = "Face Tracked"
-                        tvDetectionLabel.setTextColor("#38BDF8".toColorInt())
-                        tvConfidence.text = "${frameSequence.size}/30"
-                    }
-                }
-            } else {
-                framesWithoutFace++
-                if (framesWithoutFace > 5) {
-                    faceOverlay.clear() 
-                    activity?.runOnUiThread {
-                        tvDetectionLabel.text = "No Target"
-                        tvDetectionLabel.setTextColor("#EF4444".toColorInt())
-                        tvConfidence.text = "Searching..."
-                        warningBanner.visibility = View.GONE
-                    }
                 }
             }
-        } catch (e: Exception) { Log.e(TAG, "Analysis error: ${e.message}")
-        } finally { imageProxy.close() }
+
+            activity?.runOnUiThread {
+                if (closedEyeFrames >= 2) {
+                    tvEyeState.text = "Closed"
+                    tvEyeState.setTextColor(android.graphics.Color.parseColor("#EF5350"))
+                    warningBanner.visibility = View.VISIBLE 
+                    if (closedEyeFrames % 10 == 0) triggerVibration(200) 
+                } else if (openEyeFrames >= 1) {
+                    tvEyeState.text = "Open"
+                    tvEyeState.setTextColor(android.graphics.Color.parseColor("#6ABF69"))
+                    warningBanner.visibility = View.GONE 
+                }
+            }
+
+            if (frameSequence.size == sequenceLength) frameSequence.removeFirst()
+            frameSequence.addLast(floatArrayOf(avgEar, mar))
+
+            if (frameSequence.size == sequenceLength) {
+                runLSTMInference(avgEar, mar)
+            } else {
+                activity?.runOnUiThread {
+                    tvDetectionLabel.text = "Face Tracked"
+                    tvDetectionLabel.setTextColor("#38BDF8".toColorInt())
+                    tvConfidence.text = "${frameSequence.size}/30"
+                }
+            }
+        } else {
+            framesWithoutFace++
+            if (framesWithoutFace > 5) {
+                activity?.runOnUiThread {
+                    faceOverlay.clear() 
+                    tvDetectionLabel.text = "No Target"
+                    tvDetectionLabel.setTextColor("#EF4444".toColorInt())
+                    tvConfidence.text = "Searching..."
+                    warningBanner.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    override fun onError(error: String) {
+        Log.e(TAG, "MediaPipe Error: $error")
     }
 
     private fun runLSTMInference(currentEar: Float, currentMar: Float) {
@@ -744,18 +745,13 @@ class MonitorFragment : Fragment() {
         } catch (e: Exception) { Log.e(TAG, "LSTM load failed: ${e.message}") }
 
         try {
-            val baseOptions = BaseOptions.builder().setModelAssetPath("face_landmarker.task").build()
-            val options = FaceLandmarker.FaceLandmarkerOptions.builder()
-                .setBaseOptions(baseOptions)
-                .setRunningMode(RunningMode.IMAGE)
-                .setNumFaces(1)
-                .build()
-            faceLandmarker = FaceLandmarker.createFromOptions(requireContext(), options)
-        } catch (e: Exception) { Log.e(TAG, "MediaPipe load failed: ${e.message}") }
+            faceLandmarkerHelper = FaceLandmarkerHelper(requireContext(), this)
+        } catch (e: Exception) { Log.e(TAG, "MediaPipe Helper load failed: ${e.message}") }
     }
 
     private fun bindViews(view: View) {
         cameraPreview    = view.findViewById(R.id.cameraPreview)
+        faceOverlay      = view.findViewById(R.id.faceOverlay)
         tvTimer          = view.findViewById(R.id.tvTimer)
         tvFPS            = view.findViewById(R.id.tvFPS)
         tvLiveEar        = view.findViewById(R.id.tvLiveEar)
