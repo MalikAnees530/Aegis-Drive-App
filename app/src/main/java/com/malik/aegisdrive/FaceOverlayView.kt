@@ -6,8 +6,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
-import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
-import kotlin.math.max
+import com.google.mediapipe.tasks.vision.facelandmarker.FaceLandmarkerResult
+import kotlin.math.min
 
 class FaceOverlayView @JvmOverloads constructor(
     context: Context,
@@ -15,59 +15,42 @@ class FaceOverlayView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private var leftEye: List<NormalizedLandmark>? = null
-    private var rightEye: List<NormalizedLandmark>? = null
-    private var lips: List<NormalizedLandmark>? = null
-
-    private var frameWidth: Float = 480f
-    private var frameHeight: Float = 640f
-
-    private val eyePaint = Paint().apply { color = Color.GREEN; style = Paint.Style.FILL; isAntiAlias = true }
-    private val lipPaint = Paint().apply { color = Color.YELLOW; style = Paint.Style.FILL; isAntiAlias = true }
-
-    fun updateData(left: List<NormalizedLandmark>, right: List<NormalizedLandmark>, mouth: List<NormalizedLandmark>, fWidth: Int, fHeight: Int) {
-        leftEye = left
-        rightEye = right
-        lips = mouth
-        frameWidth = fWidth.toFloat()
-        frameHeight = fHeight.toFloat()
-        postInvalidate()
+    private var results: FaceLandmarkerResult? = null
+    private val pointPaint = Paint().apply {
+        color = Color.GREEN
+        strokeWidth = 2f
+        style = Paint.Style.FILL
     }
 
-    fun clear() {
-        leftEye = null
-        rightEye = null
-        lips = null
-        postInvalidate()
+    private var imageWidth: Int = 1
+    private var imageHeight: Int = 1
+    private var scaleFactor: Float = 1f
+
+    fun setResults(
+        faceLandmarkerResult: FaceLandmarkerResult,
+        imageHeight: Int,
+        imageWidth: Int
+    ) {
+        results = faceLandmarkerResult
+        this.imageHeight = imageHeight
+        this.imageWidth = imageWidth
+
+        scaleFactor = min(width * 1f / imageWidth, height * 1f / imageHeight)
+        invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-        val overlayWidth = width.toFloat()
-        val overlayHeight = height.toFloat()
-
-        if (overlayWidth == 0f || overlayHeight == 0f) return
-
-        // CenterCrop Math
-        val scaleFactor = max(overlayWidth / frameWidth, overlayHeight / frameHeight)
-        val scaledWidth = frameWidth * scaleFactor
-        val scaledHeight = frameHeight * scaleFactor
-
-        val offsetX = (overlayWidth - scaledWidth) / 2f
-        val offsetY = (overlayHeight - scaledHeight) / 2f
-
-        fun drawPoints(points: List<NormalizedLandmark>?, paint: Paint) {
-            points?.forEach {
-                val mirroredX = 1f - it.x()
-                val cx = (mirroredX * scaledWidth) + offsetX
-                val cy = (it.y() * scaledHeight) + offsetY
-                canvas.drawCircle(cx, cy, 8f, paint)
+        results?.let { faceLandmarkerResult ->
+            for (landmarks in faceLandmarkerResult.faceLandmarks()) {
+                for (landmark in landmarks) {
+                    canvas.drawPoint(
+                        landmark.x() * imageWidth * scaleFactor,
+                        landmark.y() * imageHeight * scaleFactor,
+                        pointPaint
+                    )
+                }
             }
         }
-
-        drawPoints(leftEye, eyePaint)
-        drawPoints(rightEye, eyePaint)
-        drawPoints(lips, lipPaint)
     }
 }
