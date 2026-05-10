@@ -89,7 +89,7 @@ Upon session termination, the system executes an atomic synchronization logic:
 
 ---
 
-## 👥 Project Team (BSAI 7th Semester)
+## 👥 Project Team
 
 * **Malik Anees Ahmed** (Team Lead)
 * **Mudassir Mukhtar**
