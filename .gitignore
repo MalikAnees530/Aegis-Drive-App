@@ -7,6 +7,7 @@
 /.idea/modules.xml
 /.idea/workspace.xml
 /build/
+build/
 /captures/
 .externalNativeBuild/
 .cxx/
@@ -26,8 +27,9 @@ app/release/
 *.rar
 
 # Project specific ignores
-Errors and problem/
-Github images/
+.md mem/
+/Errors and problem/
+/Github images/
 MonitorFragment_backup.kt
 FaceOverlayView_backup.kt
 fragment_monitor_backup.xml
