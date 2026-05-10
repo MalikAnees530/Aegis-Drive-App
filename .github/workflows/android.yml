@@ -21,3 +21,15 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew assembleDebug
+
+    - name: Governance & Documentation Integrity Check
+      run: |
+        echo "Verifying administrative documentation existence..."
+        test -f README.md && test -f LICENSE && test -f CONTRIBUTING.md && test -f CODE_OF_CONDUCT.md && test -f SECURITY.md
+        echo "Administrative documentation integrity verified."
+        
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "Checking for unauthorized documentation modifications..."
+          # This is a simplified check that logs changes to core docs
+          git diff --name-only origin/main | grep -E 'README.md|LICENSE|CONTRIBUTING.md|CODE_OF_CONDUCT.md|SECURITY.md' || true
+        fi

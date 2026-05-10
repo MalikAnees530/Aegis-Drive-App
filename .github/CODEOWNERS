@@ -1,6 +1,15 @@
-# Team Lead
-* @MalikAnees530
+# 🛡️ Aegis Drive Code Ownership Policy
 
-# Collaborators
-* @mudassirmukhtar10
-* @niaz2016
+# Administrative & Core Documentation (Strict Control)
+/README.md          @MalikAnees530
+/LICENSE            @MalikAnees530
+/CONTRIBUTING.md     @MalikAnees530
+/CODE_OF_CONDUCT.md  @MalikAnees530
+/SECURITY.md         @MalikAnees530
+
+# Project Structure & Metadata
+/app/build.gradle.kts @MalikAnees530 @mudassirmukhtar10
+/google-services.json @MalikAnees530
+
+# General Codebase Ownership
+* @MalikAnees530 @mudassirmukhtar10 @niaz2016
