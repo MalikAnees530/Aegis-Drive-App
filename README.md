@@ -95,7 +95,6 @@ Upon session termination, the system executes an atomic synchronization logic:
 * **Mudassir Mukhtar**
 * **M. Niaz**
 
-**Supervised By:** Mam Farnaz Akbar  
 **Institution:** National University of Modern Languages (NUML), Islamabad
 
 ---
