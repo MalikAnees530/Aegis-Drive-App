@@ -1,4 +1,5 @@
 ﻿name: Android CI
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -12,55 +13,56 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    
-    - name: Inject Sensitive Configuration
-      run: |
-        echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
-        echo "GROK_API_KEY=$GROK_API_KEY" > local.properties
-      env:
-        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Infrastructure Security & Access Control
-      run: |
-        echo "ðŸ›¡ï¸ Starting Infrastructure Security Audit..."
-        
-        # Identify changed files relative to main
-        CHANGED_FILES=$(git diff --name-only origin/main)
-        echo "Detected changes in: "
-        echo "$CHANGED_FILES"
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-        # Protected paths pattern
-        PROTECTED_PATTERN="^.github/|^README.md$|^LICENSE$|^SECURITY.md$|^CONTRIBUTING.md$|^CODE_OF_CONDUCT.md$"
+      - name: Inject Sensitive Configuration
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          echo "GROK_API_KEY=${{ secrets.GROK_API_KEY }}" > local.properties
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
-        # Check for modifications to protected infrastructure
-        INFRA_CHANGES=$(echo "$CHANGED_FILES" | grep -E "$PROTECTED_PATTERN" || true)
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug
 
-        if [[ -n "$INFRA_CHANGES" ]]; then
-          echo "âš ï¸ Protected infrastructure modifications detected:"
-          echo "$INFRA_CHANGES"
+      - name: Infrastructure Security & Access Control
+        run: |
+          echo "🛡️ Starting Infrastructure Security Audit..."
           
-          if [[ "${{ github.actor }}" != "MalikAnees530" ]]; then
-            echo "âŒ CRITICAL: Unauthorized modification of repository infrastructure detected. Access Denied."
-            echo "User '${{ github.actor }}' is not authorized to modify core repository configuration or administrative documentation."
-            exit 1
+          # Identify changed files relative to main
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          echo "Detected changes in: "
+          echo "$CHANGED_FILES"
+          
+          # Protected paths pattern
+          PROTECTED_PATTERN="^.github/|^README.md$|^LICENSE$|^SECURITY.md$|^CONTRIBUTING.md$|^CODE_OF_CONDUCT.md$"
+          
+          # Check for modifications to protected infrastructure
+          INFRA_CHANGES=$(echo "$CHANGED_FILES" | grep -E "$PROTECTED_PATTERN" || true)
+          
+          if [[ -n "$INFRA_CHANGES" ]]; then
+            echo "⚠️ Protected infrastructure modifications detected:"
+            echo "$INFRA_CHANGES"
+          
+            if [[ "${{ github.actor }}" != "MalikAnees530" ]]; then
+              echo "❌ CRITICAL: Unauthorized modification of repository infrastructure detected. Access Denied."
+              echo "User '${{ github.actor }}' is not authorized to modify core repository configuration or administrative documentation."
+              exit 1
+            else
+              echo "✅ Authorization Verified: Lead Engineer modification detected."
+            fi
           else
-            echo "âœ… Authorization Verified: Lead Engineer modification detected."
+            echo "✅ No core infrastructure changes detected. Proceeding."
           fi
-        else
-          echo "âœ… No core infrastructure changes detected. Proceeding."
-        fi
