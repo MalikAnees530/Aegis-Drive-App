@@ -8,17 +8,6 @@ android {
     namespace = "com.malik.aegisdrive"
     compileSdk = 35
 
-    val properties = java.util.Properties()
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        properties.load(localPropertiesFile.inputStream())
-    }
-    val grokKey = properties.getProperty("GROK_API_KEY") ?: ""
-
-    buildFeatures {
-        buildConfig = true
-    }
-
     signingConfigs {
         create("release") {
             storeFile = file(System.getenv("KEYSTORE_PATH") ?: "aegis_drive.jks")
@@ -35,8 +24,6 @@ android {
         versionCode = 1
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        buildConfigField("String", "GROK_API_KEY", "\"$grokKey\"")
     }
 
     buildTypes {

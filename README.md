@@ -76,6 +76,13 @@ Upon session termination, the system executes an atomic synchronization logic:
 1.  **Batch Writing**: Flat session maps (Duration, Score, Alert Count, Focus Level) are batch-written to the `DriveSessions` collection.
 2.  **Atomic Increments**: Using `SetOptions.merge()`, the system atomically increments the user's aggregated lifetime statistics (Total Drives, Total Duration, Lifetime Score Sum) in the parent user profile document. This ensures data consistency even in poor network conditions.
 
+### 💬 Aegis AI: Intelligent Safety Assistant
+The app features an integrated AI Chatbot powered by the **Llama-3.3-70b-versatile** model via the **Groq API**. 
+*   **Architectural Pattern**: Implemented using a professional **Retrofit + Repository** pattern for robust networking and clean code separation.
+*   **Context-Aware Safety**: The chatbot is injected with the driver's current safety telemetry (e.g., real-time safety score) to provide personalized, high-precision safety advice.
+*   **Multimodal Interaction**: Supports both text-based input and **STT (Speech-to-Text)** for hands-free operation while driving, with response playback via **TTS (Text-to-Speech)**.
+*   **Secure Implementation**: API keys are securely managed via `BuildConfig` and `local.properties`, ensuring sensitive credentials never leak into version control.
+
 ---
 
 ## 🛠️ Tech Stack

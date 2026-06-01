@@ -40,7 +40,7 @@ data class ChatSession(val id: String, var name: String, val messages: MutableLi
 
 class ChatFragment : Fragment() {
 
-    private val GROQ_API_KEY = BuildConfig.GROK_API_KEY
+    private val GROQ_API_KEY = "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"
     private val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
     private lateinit var drawerLayout: DrawerLayout
