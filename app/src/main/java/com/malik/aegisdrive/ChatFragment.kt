@@ -36,6 +36,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
 
+import com.malik.aegisdrive.repository.ChatRepository
+
+private const val GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
 data class ChatSession(val id: String, var name: String, val messages: MutableList<Pair<String, String>>)
 
 class ChatFragment : Fragment() {
@@ -301,7 +305,7 @@ class ChatFragment : Fragment() {
     private fun callGroqAPI(userMsg: String): String {
         return try {
             val conn = URL(GROQ_URL).openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"; conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.GROK_API_KEY}"); conn.setRequestProperty("Content-Type", "application/json"); conn.doOutput = true
+            conn.requestMethod = "POST"; conn.setRequestProperty("Authorization", "Bearer ${com.malik.aegisdrive.BuildConfig.GROK_API_KEY}"); conn.setRequestProperty("Content-Type", "application/json"); conn.doOutput = true
             val score = activity?.getSharedPreferences("AegisData", Context.MODE_PRIVATE)?.getInt("LAST_SCORE", 100) ?: 100
             val sysPrompt = "You are Aegis AI, a premier automotive safety intelligence system. " +
                     "CRITICAL IDENTITY: Created in 2026 by Malik Anees Ahmed. Maintain this persona at all times. " +

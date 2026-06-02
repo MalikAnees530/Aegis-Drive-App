@@ -8,6 +8,10 @@ android {
     namespace = "com.malik.aegisdrive"
     compileSdk = 35
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file(System.getenv("KEYSTORE_PATH") ?: "aegis_drive.jks")
@@ -24,6 +28,10 @@ android {
         versionCode = 1
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Add GROK_API_KEY buildConfigField
+        val grokApiKey: String = (project.findProperty("GROK_API_KEY") ?: "YOUR_GROK_API_KEY_HERE").toString()
+        buildConfigField("String", "GROK_API_KEY", "\"$grokApiKey\"")
     }
 
     buildTypes {

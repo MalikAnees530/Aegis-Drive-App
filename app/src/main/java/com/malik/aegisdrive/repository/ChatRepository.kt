@@ -35,7 +35,7 @@ class ChatRepository {
             )
 
             val response = apiService.getChatCompletion(
-                authorization = "Bearer ${BuildConfig.GROK_API_KEY}",
+                authorization = "Bearer ${com.malik.aegisdrive.BuildConfig.GROK_API_KEY}",
                 request = request
             )
 
